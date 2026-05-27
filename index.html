@@ -306,16 +306,7 @@ function RecipeCard({recipe,onOpen,colls,onEdit,onExport}){
   return(
     <div onMouseOver={()=>setHov(true)} onMouseOut={()=>{setHov(false);}}
       style={{background:G.w,border:`1px solid ${hov?G.brdL:G.brd}`,borderRadius:10,cursor:"pointer",overflow:"visible",transition:"all .22s",transform:hov?"translateY(-2px)":"none",boxShadow:hov?"0 8px 24px rgba(27,79,216,.08)":"0 1px 4px rgba(0,0,0,.04)",position:"relative"}}>
-      {/* ··· menu */}
-      <button onClick={e=>{e.stopPropagation();setMenu(p=>!p);}} style={{position:"absolute",top:10,right:10,zIndex:10,background:"rgba(0,0,0,.45)",border:"none",borderRadius:6,color:"#fff",width:28,height:28,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",opacity:hov||menu?1:0,transition:"opacity .15s",fontWeight:700,letterSpacing:1}}>···</button>
-      {menu&&(
-        <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:44,right:10,zIndex:100,background:G.w,border:`1px solid ${G.brd}`,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.12)",minWidth:160,overflow:"hidden"}}>
-          <button onClick={()=>{onEdit&&onEdit();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>✏️  Editar receta</button>
-          <button onClick={()=>{onExport&&onExport();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>⬇  Exportar JSON</button>
-          <div style={{borderTop:`1px solid ${G.brd}`,margin:"2px 0"}}/>
-          <button onClick={()=>{onOpen&&onOpen();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.blue,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.blueTint} onMouseOut={e=>e.currentTarget.style.background="none"}>↗  Abrir detalle</button>
-        </div>
-      )}
+
       <div onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{height:170,background:G.surf,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative",borderRadius:"10px 10px 0 0"}}>
         {recipe.photo?<img src={recipe.photo} alt={recipe.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
           :<span style={{fontFamily:FH,fontSize:48,color:G.brd,fontWeight:700,letterSpacing:-2}}>{recipe.name.charAt(0)}</span>}
@@ -326,9 +317,28 @@ function RecipeCard({recipe,onOpen,colls,onEdit,onExport}){
           {rc.map(c=><span key={c.id} style={{background:c.color+"18",border:`1px solid ${c.color}44`,padding:"2px 7px",borderRadius:10,fontSize:9,color:c.color,fontWeight:600}}>{c.name}</span>)}
         </div>}
       </div>
-      <div onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{padding:"16px 18px 18px"}}>
-        <h3 style={{fontFamily:FH,fontSize:17,color:G.text,margin:"0 0 8px",fontWeight:700,lineHeight:1.25}}>{recipe.name}</h3>
-        <div style={{display:"flex",gap:12,color:G.textMut,fontSize:10,fontFamily:FB}}>
+      <div style={{padding:"14px 18px 16px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+          <h3 onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{fontFamily:FH,fontSize:17,color:G.text,margin:"0 0 6px",fontWeight:700,lineHeight:1.25,flex:1,cursor:"pointer"}}>{recipe.name}</h3>
+          {/* ··· menu button — always visible */}
+          <div style={{position:"relative",flexShrink:0}}>
+            <button onClick={e=>{e.stopPropagation();setMenu(p=>!p);}}
+              style={{background:"none",border:`1px solid ${G.brd}`,borderRadius:6,color:G.textMut,width:28,height:28,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,letterSpacing:1,lineHeight:1,paddingBottom:2}}
+              onMouseOver={e=>{e.currentTarget.style.background=G.surf;e.currentTarget.style.color=G.text;}}
+              onMouseOut={e=>{e.currentTarget.style.background="none";e.currentTarget.style.color=G.textMut;}}>
+              ···
+            </button>
+            {menu&&(
+              <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:32,right:0,zIndex:200,background:G.w,border:`1px solid ${G.brd}`,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.12)",minWidth:170,overflow:"hidden"}}>
+                <button onClick={()=>{onOpen&&onOpen();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>↗  Abrir detalle</button>
+                <button onClick={()=>{onEdit&&onEdit();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>✏️  Editar receta</button>
+                <div style={{borderTop:`1px solid ${G.brd}`}}/>
+                <button onClick={()=>{onExport&&onExport();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>⬇  Exportar JSON</button>
+              </div>
+            )}
+          </div>
+        </div>
+        <div onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{display:"flex",gap:12,color:G.textMut,fontSize:10,fontFamily:FB,cursor:"pointer"}}>
           <span>{recipe.portions} porciones</span>
           {cuts&&<span>{cuts}</span>}
           <span>{recipe.steps?.length||0} pasos</span>
