@@ -168,7 +168,25 @@ const DEMO_R=[{id:"r1",name:"Ceviche Clásico Limeño",category:"Pescados & Mari
   {id:"s1",name:"Marinado del Pescado",method:"Filetear el lenguado sin piel ni espinas. Dados uniformes 2×2 cm. Bowl de acero pre-enfriado en hielo. Salar y masajear 30 s. Agregar limón, mezclar suavemente 90 s hasta opacidad nacarada.",ingredients:[{id:"i1",name:"Lenguado fresco",quantity:600,unit:"g",yieldPct:80},{id:"i2",name:"Jugo de limón sutil",quantity:180,unit:"ml",yieldPct:70},{id:"i3",name:"Sal de mar fina",quantity:10,unit:"g",yieldPct:100}]},
   {id:"s2",name:"Leche de Tigre",method:"Licuar ajo, jengibre, ají y cilantro con caldo frío. Colar con chino fino. Incorporar al bowl. Ajustar acidez y salinidad.",ingredients:[{id:"i4",name:"Ajo blanco",quantity:8,unit:"g",yieldPct:85},{id:"i5",name:"Jengibre fresco",quantity:5,unit:"g",yieldPct:88},{id:"i6",name:"Ají limo",quantity:25,unit:"g",yieldPct:75},{id:"i7",name:"Cilantro fresco",quantity:12,unit:"g",yieldPct:80},{id:"i8",name:"Caldo de pescado",quantity:100,unit:"ml",yieldPct:100}]},
   {id:"s3",name:"Guarniciones",method:"Cebolla en pluma fina, enjuagar 3× agua fría. Camote: cocer desde agua fría, enfriar y glasear. Choclo: blanquear 3 min. Cancha: freír a 180°C.",ingredients:[{id:"i9",name:"Cebolla roja",quantity:80,unit:"g",yieldPct:88},{id:"i10",name:"Camote amarillo",quantity:240,unit:"g",yieldPct:82},{id:"i11",name:"Choclo peruano",quantity:160,unit:"g",yieldPct:62},{id:"i12",name:"Cancha serrana",quantity:40,unit:"g",yieldPct:100},{id:"i13",name:"Lechuga crespa",quantity:60,unit:"g",yieldPct:72}]},
-]}];
+]},{id:"r2",name:"Causa Básica",category:"Entradas",portions:4,photo:null,cutlery:["fork_knife"],colls:[],
+plating:"Molde cilíndrico individual desmoldado sobre plato frío. Capa visible de papa amarilla arriba y abajo, relleno de atún al centro. Punto de mayonesa, oliva negra y huevo hilado como guarnición.",steps:[
+  {id:"s4",name:"Papa Amarilla",method:"Cocer papa con cáscara desde agua fría con sal. Escurrir y pelar en caliente. Aplastar con prensapapas mientras tibia — nunca licuadora. Incorporar ají amarillo, limón, aceite y sal. Amasar hasta masa homogénea que no se pegue. Ajustar acidez.",ingredients:[
+    {id:"i14",name:"Papa amarilla",quantity:800,unit:"g",yieldPct:78},
+    {id:"i15",name:"Pasta de ají amarillo",quantity:60,unit:"g",yieldPct:100},
+    {id:"i16",name:"Jugo de limón sutil",quantity:40,unit:"ml",yieldPct:70},
+    {id:"i17",name:"Aceite vegetal",quantity:30,unit:"ml",yieldPct:100},
+    {id:"i18",name:"Sal fina",quantity:8,unit:"g",yieldPct:100}]},
+  {id:"s5",name:"Relleno de Atún",method:"Escurrir atún en aceite. Desmenuzar con tenedor. Mezclar con mayonesa, cebolla brunoise fina, limón y sal. Ajustar consistencia — debe quedar cremoso pero firme para moldear.",ingredients:[
+    {id:"i19",name:"Atún en aceite",quantity:240,unit:"g",yieldPct:90},
+    {id:"i20",name:"Mayonesa",quantity:80,unit:"g",yieldPct:100},
+    {id:"i21",name:"Cebolla blanca",quantity:60,unit:"g",yieldPct:88},
+    {id:"i22",name:"Jugo de limón sutil",quantity:15,unit:"ml",yieldPct:70}]},
+  {id:"s6",name:"Armado y Montaje",method:"Forrar molde cilíndrico con film. Capa de masa de papa (1.5 cm). Capa de relleno de atún. Cubrir con segunda capa de papa. Prensar suavemente. Refrigerar 30 min mínimo. Desmoldar sobre plato frío. Decorar con mayonesa, aceituna, huevo y perejil.",ingredients:[
+    {id:"i23",name:"Aceituna negra",quantity:20,unit:"g",yieldPct:85},
+    {id:"i24",name:"Huevo duro",quantity:60,unit:"g",yieldPct:88},
+    {id:"i25",name:"Perejil liso",quantity:8,unit:"g",yieldPct:75}]}
+]}
+];
 const DEMO_C=[{id:"c1",name:"Firma",color:COLL_COLORS[0]},{id:"c2",name:"Menú Degustación",color:COLL_COLORS[1]}];
 
 /* ══════════════════════════════════════════
@@ -348,6 +366,14 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
           </button>
         ))}
         <div style={{flex:1}}/>
+        <button onClick={()=>{
+          const clean={...recipe,photo:recipe.photo?"[foto_base64]":null};
+          const blob=new Blob([JSON.stringify(clean,null,2)],{type:"application/json"});
+          const url=URL.createObjectURL(blob);
+          const a=document.createElement("a");a.href=url;
+          a.download=recipe.name.replace(/\s+/g,"-").toLowerCase()+".json";
+          a.click();URL.revokeObjectURL(url);
+        }} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:6,marginRight:6})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>⬇ JSON</button>
         <button onClick={onEdit} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:6,marginRight:6})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>✏️ Editar</button>
         <button onClick={onDelete} style={{...bv("ghost",{fontSize:10,color:G.red,borderColor:G.red+"44",padding:"4px 12px",alignSelf:"center",borderRadius:6})}}
           onMouseOver={e=>e.currentTarget.style.background=G.red+"08"} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
