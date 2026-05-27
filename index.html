@@ -222,7 +222,7 @@ function App(){
     <div style={{fontFamily:FB,background:G.bg,minHeight:"100vh",color:G.text}}>
       <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")}/>
       {nav==="recipes"&&<>
-        {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{setRec(p=>[...p,{...r,id:gid()}]);}} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
+        {{view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{setRec(p=>[...p,{...r,id:gid()}]);}} onEdit={startEdit} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}}
         {view==="detail"&&sel&&<Detail recipe={sel} tab={tab} setTab={setTab} country={country} setCountry={setCtry} co={co} getP={getP} setP={setP} onDelete={()=>delR(sel.id)} colls={colls} onUpdate={updR} onEdit={()=>startEdit(sel.id)}/>}
         {view==="add"&&<AddRecipe onSave={saveR} onCancel={goBack} colls={colls}/>}
         {view==="edit"&&recipes.find(r=>r.id===editId)&&<AddRecipe initialRecipe={recipes.find(r=>r.id===editId)} onSave={saveEdit} onCancel={()=>setView("detail")} colls={colls}/>}
@@ -264,7 +264,7 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd}){
 }
 
 /* ══ GALLERY ══ */
-function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImport}){
+function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onEdit}){
   const[showImport,setShowImport]=useState(false);
   return(
     <div style={{maxWidth:1200,margin:"0 auto",padding:"48px 32px"}}>
@@ -289,20 +289,34 @@ function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImp
             <p style={{fontSize:12}}>Agrega tu primera receta con el botón superior derecho</p>
           </div>
         :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:20}}>
-            {recipes.map(r=><RecipeCard key={r.id} recipe={r} onOpen={()=>onOpen(r.id)} colls={colls}/>)}
+            {recipes.map(r=><RecipeCard key={r.id} recipe={r} onOpen={()=>onOpen(r.id)} colls={colls}
+              onEdit={()=>onEdit&&onEdit(r.id)}
+              onExport={()=>{const cl={...r,photo:r.photo?"[foto]":null};const b=new Blob([JSON.stringify(cl,null,2)],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=r.name.replace(/\s+/g,"-").toLowerCase()+".json";a.click();URL.revokeObjectURL(u);}}
+            />)}
           </div>}
     </div>
   );
 }
 
-function RecipeCard({recipe,onOpen,colls}){
+function RecipeCard({recipe,onOpen,colls,onEdit,onExport}){
   const[hov,setHov]=useState(false);
+  const[menu,setMenu]=useState(false);
   const cuts=CUTLERY.filter(c=>recipe.cutlery?.includes(c.id)).map(c=>c.icon).join(" ");
   const rc=recipe.colls?.map(cid=>colls?.find(c=>c.id===cid)).filter(Boolean)||[];
   return(
-    <div onClick={onOpen} onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)}
-      style={{background:G.w,border:`1px solid ${hov?G.brdL:G.brd}`,borderRadius:10,cursor:"pointer",overflow:"hidden",transition:"all .22s",transform:hov?"translateY(-2px)":"none",boxShadow:hov?"0 8px 24px rgba(27,79,216,.08)":"0 1px 4px rgba(0,0,0,.04)"}}>
-      <div style={{height:170,background:G.surf,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
+    <div onMouseOver={()=>setHov(true)} onMouseOut={()=>{setHov(false);}}
+      style={{background:G.w,border:`1px solid ${hov?G.brdL:G.brd}`,borderRadius:10,cursor:"pointer",overflow:"visible",transition:"all .22s",transform:hov?"translateY(-2px)":"none",boxShadow:hov?"0 8px 24px rgba(27,79,216,.08)":"0 1px 4px rgba(0,0,0,.04)",position:"relative"}}>
+      {/* ··· menu */}
+      <button onClick={e=>{e.stopPropagation();setMenu(p=>!p);}} style={{position:"absolute",top:10,right:10,zIndex:10,background:"rgba(0,0,0,.45)",border:"none",borderRadius:6,color:"#fff",width:28,height:28,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",opacity:hov||menu?1:0,transition:"opacity .15s",fontWeight:700,letterSpacing:1}}>···</button>
+      {menu&&(
+        <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:44,right:10,zIndex:100,background:G.w,border:`1px solid ${G.brd}`,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.12)",minWidth:160,overflow:"hidden"}}>
+          <button onClick={()=>{onEdit&&onEdit();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>✏️  Editar receta</button>
+          <button onClick={()=>{onExport&&onExport();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>⬇  Exportar JSON</button>
+          <div style={{borderTop:`1px solid ${G.brd}`,margin:"2px 0"}}/>
+          <button onClick={()=>{onOpen&&onOpen();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.blue,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.blueTint} onMouseOut={e=>e.currentTarget.style.background="none"}>↗  Abrir detalle</button>
+        </div>
+      )}
+      <div onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{height:170,background:G.surf,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative",borderRadius:"10px 10px 0 0"}}>
         {recipe.photo?<img src={recipe.photo} alt={recipe.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
           :<span style={{fontFamily:FH,fontSize:48,color:G.brd,fontWeight:700,letterSpacing:-2}}>{recipe.name.charAt(0)}</span>}
         <div style={{position:"absolute",top:10,left:12,background:G.blueTint,border:`1px solid ${G.blue}22`,padding:"2px 9px",borderRadius:20,fontSize:9,color:G.blue,fontFamily:FB,fontWeight:600,letterSpacing:.5}}>
@@ -312,7 +326,7 @@ function RecipeCard({recipe,onOpen,colls}){
           {rc.map(c=><span key={c.id} style={{background:c.color+"18",border:`1px solid ${c.color}44`,padding:"2px 7px",borderRadius:10,fontSize:9,color:c.color,fontWeight:600}}>{c.name}</span>)}
         </div>}
       </div>
-      <div style={{padding:"16px 18px 18px"}}>
+      <div onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{padding:"16px 18px 18px"}}>
         <h3 style={{fontFamily:FH,fontSize:17,color:G.text,margin:"0 0 8px",fontWeight:700,lineHeight:1.25}}>{recipe.name}</h3>
         <div style={{display:"flex",gap:12,color:G.textMut,fontSize:10,fontFamily:FB}}>
           <span>{recipe.portions} porciones</span>
@@ -380,22 +394,53 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
           Eliminar
         </button>
       </div>
-      {tab==="recipe"&&<RecipeTab recipe={recipe}/>}
+      {tab==="recipe"&&<RecipeTab recipe={recipe} onUpdate={onUpdate}/>}
       {tab==="costing"&&<CosteoTab recipe={recipe} country={country} setCountry={setCountry} co={co} getP={getP} setP={setP}/>}
     </div>
   );
 }
 
-function RecipeTab({recipe}){
+function RecipeTab({recipe,onUpdate}){
+  const[editStep,setEditStep]=useState(null); // {stepId, field} being edited
+  const[draft,setDraft]=useState("");
+
+  const startEdit=(stepId,field,current)=>{setEditStep({stepId,field});setDraft(current);};
+  const saveEdit=(stepId,field)=>{
+    if(!onUpdate)return;
+    const updated={...recipe,steps:recipe.steps.map(s=>{
+      if(s.id!==stepId)return s;
+      if(field==="name")return{...s,name:draft};
+      if(field==="method")return{...s,method:draft};
+      if(field==="notes")return{...s,notes:draft};
+      return s;
+    })};
+    onUpdate(updated);
+    setEditStep(null);
+  };
+  const isEditing=(sid,f)=>editStep?.stepId===sid&&editStep?.field===f;
+
+  const editStyle={cursor:"text",borderBottom:`1px dashed ${G.blue}`,paddingBottom:1};
+  const pencil=<span style={{fontSize:9,color:G.blue,marginLeft:5,opacity:.5}}>✎</span>;
+
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
       {recipe.steps.map((step,idx)=>(
         <div key={step.id} style={{border:`1px solid ${G.brd}`,borderRadius:10,overflow:"hidden"}}>
+          {/* Step header */}
           <div style={{background:G.surf,borderBottom:`1px solid ${G.brd}`,padding:"12px 20px",display:"flex",alignItems:"center",gap:12}}>
             <span style={{background:G.blue,color:G.w,width:24,height:24,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0,fontFamily:FH}}>{idx+1}</span>
-            <span style={{fontFamily:FH,fontSize:16,color:G.text,fontWeight:700}}>{step.name}</span>
+            {isEditing(step.id,"name")
+              ?<input autoFocus value={draft} onChange={e=>setDraft(e.target.value)}
+                  onBlur={()=>saveEdit(step.id,"name")}
+                  onKeyDown={e=>{if(e.key==="Enter")saveEdit(step.id,"name");if(e.key==="Escape")setEditStep(null);}}
+                  style={{fontFamily:FH,fontSize:16,fontWeight:700,border:"none",borderBottom:`2px solid ${G.blue}`,outline:"none",background:"transparent",color:G.text,flex:1}}/>
+              :<span onClick={()=>onUpdate&&startEdit(step.id,"name",step.name)}
+                  style={{fontFamily:FH,fontSize:16,color:G.text,fontWeight:700,...(onUpdate?editStyle:{})}} title={onUpdate?"Clic para editar":""}>
+                  {step.name}{onUpdate&&pencil}
+                </span>}
           </div>
           <div style={{padding:"20px",display:"flex",gap:24,flexWrap:"wrap",background:G.w}}>
+            {/* Ingredients */}
             <div style={{flex:"0 0 280px",minWidth:180}}>
               <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:10,fontFamily:FB}}>Ingredientes</p>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -412,9 +457,31 @@ function RecipeTab({recipe}){
                 ))}</tbody>
               </table>
             </div>
+            {/* Methodology */}
             <div style={{flex:1,minWidth:180}}>
               <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:10,fontFamily:FB}}>Metodología</p>
-              <p style={{margin:0,fontSize:12,color:G.textMid,lineHeight:1.8,fontFamily:FB}}>{step.method}</p>
+              {isEditing(step.id,"method")
+                ?<textarea autoFocus value={draft} onChange={e=>setDraft(e.target.value)} rows={6}
+                    onBlur={()=>saveEdit(step.id,"method")}
+                    onKeyDown={e=>{if(e.key==="Escape")setEditStep(null);}}
+                    style={{width:"100%",fontFamily:FB,fontSize:12,lineHeight:1.8,border:`1px solid ${G.blue}`,borderRadius:6,padding:"8px 10px",outline:"none",resize:"vertical",color:G.text,boxSizing:"border-box"}}/>
+                :<p onClick={()=>onUpdate&&startEdit(step.id,"method",step.method)}
+                    style={{margin:0,fontSize:12,color:G.textMid,lineHeight:1.8,fontFamily:FB,...(onUpdate?{cursor:"text"}:{})}} title={onUpdate?"Clic para editar":""}>
+                    {step.method}{onUpdate&&pencil}
+                  </p>}
+              {/* Notes / corrections */}
+              <div style={{marginTop:12,borderTop:`1px solid ${G.brd}`,paddingTop:10}}>
+                <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:"#F59E0B",fontWeight:600,marginBottom:6,fontFamily:FB}}>✍ Notas y correcciones</p>
+                {isEditing(step.id,"notes")
+                  ?<textarea autoFocus value={draft} onChange={e=>setDraft(e.target.value)} rows={3}
+                      onBlur={()=>saveEdit(step.id,"notes")}
+                      onKeyDown={e=>{if(e.key==="Escape")setEditStep(null);}}
+                      style={{width:"100%",fontFamily:FB,fontSize:11,lineHeight:1.7,border:`1px solid #F59E0B`,borderRadius:6,padding:"6px 10px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                  :<p onClick={()=>onUpdate&&startEdit(step.id,"notes",step.notes||"")}
+                      style={{margin:0,fontSize:11,color:step.notes?"#92400E":G.textMut,lineHeight:1.7,fontFamily:FB,fontStyle:step.notes?"normal":"italic",...(onUpdate?{cursor:"text"}:{})}}>
+                      {step.notes||"Clic para agregar notas o correcciones…"}
+                    </p>}
+              </div>
             </div>
           </div>
         </div>
