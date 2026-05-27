@@ -630,11 +630,18 @@ function ImportModal({onClose,onImport,colls}){
           {/* ─── SINGLE FILE ─── */}
           {tab==="file"&&(
             <div>
-              <p style={{fontFamily:FB,fontSize:12,color:G.textMid,marginBottom:14,lineHeight:1.6}}>Sube un archivo con tu receta. Soporta <strong>PDF</strong>, <strong>Word</strong>, <strong>Excel</strong>, <strong>foto</strong> (incluso escrita a mano).</p>
-              <input type="file" ref={fileRef} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic" style={{display:"none"}} onChange={e=>e.target.files[0]&&importFile(e.target.files[0])}/>
-              <button onClick={()=>fileRef.current.click()} disabled={loading} style={{...bv("p",{padding:"14px",borderRadius:8,fontSize:13,width:"100%",textAlign:"center",opacity:loading?.6:1})}} onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
-                {loading?"⏳ Analizando con IA…":"📁 Seleccionar archivo"}
-              </button>
+              <p style={{fontFamily:FB,fontSize:12,color:G.textMid,marginBottom:12,lineHeight:1.6}}>Sube un archivo con tu receta. Soporta <strong>PDF</strong>, <strong>Word</strong>, <strong>Excel</strong>, <strong>TXT</strong>, <strong>foto</strong> (incluso escrita a mano).</p>
+              <input type="file" ref={fileRef} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic,.txt" style={{display:"none"}} onChange={e=>e.target.files[0]&&importFile(e.target.files[0])}/>
+              <div
+                onClick={()=>!loading&&fileRef.current.click()}
+                onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=G.blue;e.currentTarget.style.background=G.blueTint;}}
+                onDragLeave={e=>{e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.background=G.surf;}}
+                onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.background=G.surf;if(f&&!loading)importFile(f);}}
+                style={{border:`2px dashed ${G.brd}`,borderRadius:10,padding:"28px 20px",textAlign:"center",cursor:loading?"not-allowed":"pointer",background:G.surf,transition:"all .15s",opacity:loading?.6:1}}>
+                <p style={{fontFamily:FH,fontSize:22,margin:"0 0 6px"}}>{loading?"⏳":"📂"}</p>
+                <p style={{fontFamily:FH,fontSize:14,color:G.text,margin:"0 0 4px",fontWeight:700}}>{loading?"Analizando con IA…":"Arrastra tu archivo aquí"}</p>
+                <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>o haz clic para seleccionar · PDF, Word, Excel, TXT, foto</p>
+              </div>
             </div>
           )}
 
@@ -657,7 +664,7 @@ function ImportModal({onClose,onImport,colls}){
                   <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>o haz clic para seleccionar — PDF, Word, Excel, fotos</p>
                 </div>
               )}
-              <input type="file" ref={batchRef} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic" style={{display:"none"}} onChange={e=>addBatchFiles(e.target.files)}/>
+              <input type="file" ref={batchRef} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic,.txt" style={{display:"none"}} onChange={e=>addBatchFiles(e.target.files)}/>
 
               {/* File queue */}
               {batchFiles.length>0&&(
@@ -981,7 +988,7 @@ function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
   const[activePair,setActivePair]=useState(null);
   const[concept,setConcept]=useState(null);
   const[loading,setLoading]=useState(false);
-  const[mode,setMode]=useState("cocina");
+  const[mode,setMode]=useState("todo");
   const[activeCat,setActiveCat]=useState(null);
   const[catSearch,setCatSearch]=useState("");
   const[customIngs,setCustomIngs]=useState({});
@@ -1806,7 +1813,7 @@ function FlavorWheel({sectors,selected,hoverIng,onToggle,onHover,mode,onCatClick
       {selected.map(name=>{
         const sec=sectors.find(s=>s.ings.includes(name));if(!sec)return null;
         const idx=sectors.indexOf(sec),ii=sec.ings.indexOf(name),slot=DEG/sec.ings.length;
-        const angle=idx*DEG+slot*(ii+.5),[dx,dy]=pt(R_SECTOR-9,angle);
+        const angle=idx*DEG+slot*(ii+.5),[dx,dy]=pt(R_ING+10,angle);
         return <circle key={`dot-${name}`} cx={dx} cy={dy} r={4} fill="#1B4FD8" opacity=".9"/>;
       })}
       {/* Hover dot */}
