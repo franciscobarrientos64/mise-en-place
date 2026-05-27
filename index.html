@@ -26,14 +26,9 @@
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
 const { useState, useRef, useEffect, useCallback } = React;
-// API key stored in localStorage — never hardcoded
-const getKey = () => localStorage.getItem('mep_akey') || '';
-const AHEADERS = () => ({
-  'Content-Type':'application/json',
-  'x-api-key': getKey(),
-  'anthropic-version':'2023-06-01',
-  'anthropic-dangerous-direct-browser-access':'true'
-});
+// All AI calls go through /api/claude (Vercel serverless proxy)
+const AHEADERS = () => ({ 'Content-Type': 'application/json' });
+const AI_URL = '/api/claude';
 
 /* ══ TOKENS ══ */
 const G = {
@@ -180,48 +175,8 @@ const DEMO_C=[{id:"c1",name:"Firma",color:COLL_COLORS[0]},{id:"c2",name:"Menú D
    APP
 ══════════════════════════════════════════ */
 
-/* ══ API KEY SETUP ══ */
-function ApiKeySetup({onSave}){
-  const[key,setKey]=useState("");
-  const[err,setErr]=useState("");
-  const save=()=>{
-    if(!key.trim().startsWith("sk-ant-")){setErr("Debe comenzar con sk-ant-");return;}
-    localStorage.setItem('mep_akey',key.trim());
-    onSave();
-  };
-  return(
-    <div style={{minHeight:"100vh",background:"#0A0F1A",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
-      <div style={{background:"#fff",borderRadius:16,padding:"40px 44px",maxWidth:480,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.3)"}}>
-        <p style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:28,fontWeight:700,color:"#0A0F1A",margin:"0 0 6px"}}>🍽️ Mise en Place</p>
-        <p style={{fontFamily:"'Inter',sans-serif",fontSize:13,color:"#6B7280",margin:"0 0 28px",lineHeight:1.5}}>Para usar la IA necesitas tu Anthropic API key. Se guarda localmente en tu navegador — nunca sale de tu dispositivo.</p>
-        <label style={{fontFamily:"'Inter',sans-serif",fontSize:10,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:"#1B4FD8",display:"block",marginBottom:6}}>Anthropic API Key</label>
-        <input
-          type="password"
-          value={key}
-          onChange={e=>setKey(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&save()}
-          placeholder="sk-ant-api03-..."
-          style={{width:"100%",padding:"10px 14px",border:"1px solid #E5E7EB",borderRadius:8,fontFamily:"monospace",fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:8}}
-          onFocus={e=>e.target.style.borderColor="#1B4FD8"}
-          onBlur={e=>e.target.style.borderColor="#E5E7EB"}
-          autoFocus
-        />
-        {err&&<p style={{fontFamily:"'Inter',sans-serif",fontSize:11,color:"#EF4444",margin:"0 0 8px"}}>{err}</p>}
-        <p style={{fontFamily:"'Inter',sans-serif",fontSize:11,color:"#9CA3AF",margin:"0 0 16px"}}>
-          Obtén tu key en{" "}
-          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" style={{color:"#1B4FD8"}}>console.anthropic.com</a>
-        </p>
-        <button onClick={save} style={{width:"100%",background:"#1B4FD8",color:"#fff",border:"none",borderRadius:8,padding:"12px",fontFamily:"'Inter',sans-serif",fontSize:14,fontWeight:600,cursor:"pointer"}}>
-          Guardar y continuar
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function App(){
-  const[hasKey,setHasKey]=useState(()=>!!localStorage.getItem('mep_akey'));
-  if(!hasKey) return <ApiKeySetup onSave={()=>setHasKey(true)}/>;
+
   const[nav,setNav]=useState("recipes");
   const[view,setView]=useState("gallery");
   const[recipes,setRec]=useState(DEMO_R);
@@ -542,7 +497,7 @@ function ImportModal({onClose,onImport,colls}){
       const text=await toText(file);
       messages=[{role:"user",content:EXTRACT_PROMPT+"\n\nContenido:\n"+text.slice(0,8000)}];
     }
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),
+    const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
       body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,
         system:"Chef experto. Responde SOLO JSON válido, sin texto extra.",messages})});
     const data=await res.json();
@@ -599,7 +554,7 @@ function ImportModal({onClose,onImport,colls}){
     if(!urlVal.trim()){setError("Ingresa una URL");return;}
     setLoading(true);setError("");setPreview(null);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),
+      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
         body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,
           tools:[{type:"web_search_20250305",name:"web_search"}],
           system:"Chef experto. Busca la receta y devuelve SOLO JSON válido.",
@@ -620,7 +575,7 @@ function ImportModal({onClose,onImport,colls}){
     const hasMultiple=textVal.includes("---");
     try{
       if(hasMultiple){
-        const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),
+        const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
           body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:4000,
             system:"Chef experto. Responde SOLO con array JSON válido, sin texto extra.",
             messages:[{role:"user",content:`Este texto contiene MÚLTIPLES recetas separadas por "---". Extráelas TODAS como array JSON:\n[{receta1},{receta2},...]\n\nCada receta con formato:\n{"name":"...","category":"...","portions":4,"plating":"...","cutlery":["fork_knife"],"steps":[{"name":"...","method":"...","ingredients":[{"name":"...","quantity":100,"unit":"g","yieldPct":90}]}]}\n\nTexto:\n${textVal.slice(0,12000)}`}]})});
@@ -632,7 +587,7 @@ function ImportModal({onClose,onImport,colls}){
         arr.forEach(p=>onImport(normalize(p)));
         setPreview({_multi:true,_count:arr.length});
       } else {
-        const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),
+        const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
           body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,
             system:"Chef experto. Responde SOLO JSON válido.",
             messages:[{role:"user",content:EXTRACT_PROMPT+"\n\nTexto:\n"+textVal.slice(0,8000)}]})});
@@ -1086,7 +1041,7 @@ function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
       ?`Busca prioritariamente en: ${active.map(s=>`${s.name} (${s.domain})`).join(", ")}.`
       :"Busca en las mejores fuentes gastronómicas del mundo.";
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
+      const res=await fetch(AI_URL,{
         method:"POST", headers:AHEADERS(),
         body:JSON.stringify({
           model:"claude-sonnet-4-6",max_tokens:2000,
@@ -1121,7 +1076,7 @@ function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
     setLoading(true);setConcept(null);
     const ctx=allIngsForSpark.map(name=>{const s=SECTORS.find(sec=>sec.ings.includes(name));return`${name}${s?` (familia: ${s.name})`:""}`;});
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,system:"Eres el asistente creativo de un chef de nivel mundial. Dominas Niki Segnit y François Chartier. Respondes SIEMPRE con JSON válido puro, sin texto extra, sin backticks. Sé conciso.",messages:[{role:"user",content:`Ingredientes: ${ctx.join(", ")}\n\nGenera 3 conceptos de alta cocina o coctelería. Responde SOLO con JSON válido (máximo 120 palabras por campo):\n[\n  {\n    "nombre": "Nombre poético",\n    "descripcion": "Una frase de la esencia",\n    "logica": "Lógica aromática molecular estilo Chartier (conciso)",\n    "tecnica": "Técnica y emplatado (conciso)"\n  }\n]`}]})});
+      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,system:"Eres el asistente creativo de un chef de nivel mundial. Dominas Niki Segnit y François Chartier. Respondes SIEMPRE con JSON válido puro, sin texto extra, sin backticks. Sé conciso.",messages:[{role:"user",content:`Ingredientes: ${ctx.join(", ")}\n\nGenera 3 conceptos de alta cocina o coctelería. Responde SOLO con JSON válido (máximo 120 palabras por campo):\n[\n  {\n    "nombre": "Nombre poético",\n    "descripcion": "Una frase de la esencia",\n    "logica": "Lógica aromática molecular estilo Chartier (conciso)",\n    "tecnica": "Técnica y emplatado (conciso)"\n  }\n]`}]})});
       const data=await res.json();
       if(!res.ok){ setConcept(`Error ${res.status}: ${data?.error?.message||JSON.stringify(data)}`); setLoading(false); return; }
       const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
@@ -1460,7 +1415,7 @@ function NecesidadLab({onAddRecipe,onOpenRecipes}){
     if(!q){setError("Describe lo que necesitas o elige un filtro");return;}
     setLoading(true);setResults(null);setError("");
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
+      const res=await fetch(AI_URL,{
         method:"POST",headers:AHEADERS(),
         body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,
           system:"Eres un chef experto y nutricionista. Generas sugerencias de platos creativas, prácticas y apetitosas. Respondes SOLO con JSON válido, sin texto extra.",
@@ -1550,7 +1505,7 @@ function DishCard({dish,index,onAddRecipe,onOpenRecipes}){
   const createRecipe=async()=>{
     setCreating(true);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
+      const res=await fetch(AI_URL,{
         method:"POST",headers:AHEADERS(),
         body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,
           system:"Eres un chef experto. Respondes SOLO con JSON válido, sin texto extra, sin backticks.",
@@ -1685,7 +1640,7 @@ function SparkCard({card, index, defaultOpen, onAddRecipe, onOpenRecipes}){
   const createRecipe=async()=>{
     setCreating(true);
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
+      const res=await fetch(AI_URL,{
         method:"POST",headers:AHEADERS(),
         body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,
           system:"Eres un chef experto. Respondes SOLO con JSON válido, sin texto extra, sin backticks.",
