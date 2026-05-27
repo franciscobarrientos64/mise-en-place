@@ -1,0 +1,1873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Mise en Place</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:#fff}
+  #root{min-height:100vh}
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:#f5f5f5}
+  ::-webkit-scrollbar-thumb{background:#d0d8e8;border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:#1B4FD8}
+  input[type=number]::-webkit-inner-spin-button{opacity:.6}
+  select option{background:#fff;color:#0A0F1A}
+  ::selection{background:#1B4FD820;color:#1B4FD8}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useRef, useEffect, useCallback } = React;
+// API key stored in localStorage — never hardcoded
+const getKey = () => localStorage.getItem('mep_akey') || '';
+const AHEADERS = () => ({
+  'Content-Type':'application/json',
+  'x-api-key': getKey(),
+  'anthropic-version':'2023-06-01',
+  'anthropic-dangerous-direct-browser-access':'true'
+});
+
+/* ══ TOKENS ══ */
+const G = {
+  bg:"#FFFFFF", surf:"#F7F9FC", card:"#FFFFFF", cardH:"#F4F7FF",
+  brd:"#E2E8F0", brdL:"#C8D4E8",
+  blue:"#1B4FD8", blueHov:"#1440B8", blueTint:"#F0F4FF", blueLight:"#E8EEFF",
+  text:"#0A0F1A", textMid:"#4A5568", textMut:"#8898AA",
+  gold:"#B8860B", goldL:"#D4A020",
+  red:"#DC2626", green:"#16A34A", w:"#FFF",
+};
+const FH = `"Space Grotesk",sans-serif`;
+const FB = `"Inter",system-ui,sans-serif`;
+const inp = (x={}) => ({
+  background:G.w, border:`1px solid ${G.brd}`, color:G.text,
+  padding:"9px 13px", borderRadius:6, fontFamily:FB, fontSize:13,
+  outline:"none", width:"100%", boxSizing:"border-box",
+  transition:"border-color .18s", ...x
+});
+const bv = (v="p",x={}) => ({
+  background: v==="p"?G.blue : v==="d"?G.red : v==="ghost"?G.w : G.surf,
+  color: v==="p"?G.w : v==="d"?G.w : v==="ghost"?G.text : G.textMid,
+  border: v==="ghost"?`1px solid ${G.brd}` : v==="soft"?`1px solid ${G.brd}`:"none",
+  cursor:"pointer", fontFamily:FB, fontSize:13, fontWeight:600,
+  padding:"9px 18px", borderRadius:6, letterSpacing:.1,
+  transition:"all .18s", whiteSpace:"nowrap", ...x
+});
+
+/* ══ STATIC DATA ══ */
+const COUNTRIES=[
+  {code:"PE",name:"Perú",currency:"PEN",symbol:"S/"},
+  {code:"US",name:"EE.UU.",currency:"USD",symbol:"$"},
+  {code:"MX",name:"México",currency:"MXN",symbol:"Mex$"},
+  {code:"AR",name:"Argentina",currency:"ARS",symbol:"$"},
+  {code:"CL",name:"Chile",currency:"CLP",symbol:"$"},
+  {code:"CO",name:"Colombia",currency:"COP",symbol:"$"},
+  {code:"BR",name:"Brasil",currency:"BRL",symbol:"R$"},
+  {code:"ES",name:"España",currency:"EUR",symbol:"€"},
+  {code:"FR",name:"Francia",currency:"EUR",symbol:"€"},
+  {code:"GB",name:"UK",currency:"GBP",symbol:"£"},
+  {code:"JP",name:"Japón",currency:"JPY",symbol:"¥"},
+  {code:"AU",name:"Australia",currency:"AUD",symbol:"A$"},
+];
+const UNITS=["g","kg","ml","l","unidad","pza","taza","cdta","cda","manojo","pizca","oz","lb"];
+const CATEGORIES=["Entradas","Sopas & Caldos","Pastas & Arroces","Carnes",
+  "Pescados & Mariscos","Aves","Vegetariano & Vegano","Postres",
+  "Panadería & Repostería","Bebidas & Cócteles","Salsas & Bases","Snacks & Bocadillos"];
+const CUTLERY=[
+  {id:"fork_knife",label:"Tenedor + Cuchillo",icon:"🍽️"},
+  {id:"fork",label:"Tenedor",icon:"🍴"},
+  {id:"spoon",label:"Cuchara",icon:"🥄"},
+  {id:"chopsticks",label:"Palillos",icon:"🥢"},
+  {id:"hands",label:"Manos",icon:"🤲"},
+  {id:"glass",label:"Copa",icon:"🥂"},
+];
+const COLL_COLORS=["#1B4FD8","#0891B2","#7C3AED","#059669","#DC2626","#D97706","#0D9488"];
+
+/* ══ WHEEL DATA ══ */
+const SECTORS=[
+  {id:"tostados", name:"Tostados",      col:"#3D2010", ings:["Café","Cacao 70%","Avellana tostada","Malta oscura"]},
+  {id:"carneos",  name:"Carneos",        col:"#6B1E1E", ings:["Ternera","Cordero","Pato","Pollo asado"]},
+  {id:"curados",  name:"Curados",        col:"#7A3A18", ings:["Jamón ibérico","Tocino","Miso","Anchoa"]},
+  {id:"lacteos",  name:"Lácteos",        col:"#A07830", ings:["Parmesano","Queso azul","Burrata","Mantequilla"]},
+  {id:"terrosos", name:"Terrosos",       col:"#5C4828", ings:["Trufa negra","Porcini","Remolacha","Zanahoria"]},
+  {id:"amostazados",name:"Amostazados",  col:"#6B7A10", ings:["Mostaza Dijon","Alcaparra","Rábano picante","Berro"]},
+  {id:"sulfurosos",name:"Sulfurosos",    col:"#909010", ings:["Ajo","Cebolla roja","Puerro","Coliflor"]},
+  {id:"marinos",  name:"Marinos",        col:"#0F5870", ings:["Ostras","Caviar","Alga nori","Vieiras"]},
+  {id:"salados",  name:"Salados",        col:"#0F6858", ings:["Aceitunas","Pepinillo","Alcaparra","Sardina"]},
+  {id:"herbaceos",name:"Herbáceos",      col:"#286820", ings:["Cilantro","Albahaca","Perejil","Eneldo"]},
+  {id:"resinosos",name:"Resinosos",      col:"#1A5028", ings:["Romero","Tomillo","Laurel","Enebro"]},
+  {id:"anisados", name:"Anisados",       col:"#3A6838", ings:["Hinojo","Estragón","Anís estrellado","Perifollo"]},
+  {id:"calidaEsp",name:"Esp. Cálida",    col:"#884010", ings:["Canela","Cardamomo","Vainilla","Clavo"]},
+  {id:"citricos", name:"Cítricos",       col:"#B09010", ings:["Limón sutil","Naranja","Yuzu","Bergamota"]},
+  {id:"florales", name:"Florales",       col:"#A06880", ings:["Rosa","Lavanda","Azahar","Saúco"]},
+  {id:"bayas",    name:"Bayas",          col:"#682870", ings:["Frambuesa","Fresa","Cereza","Arándano"]},
+  {id:"tropicales",name:"Tropicales",    col:"#B86818", ings:["Mango","Maracuyá","Coco","Piña"]},
+  {id:"afrutados",name:"Afrutados",      col:"#788040", ings:["Manzana verde","Pera","Melón","Uva moscatel"]},
+  {id:"spirits",  name:"Espirituosos",   col:"#382060", ings:["Whisky añejo","Ron oscuro","Gin","Mezcal"]},
+  {id:"bar",      name:"Bar & Bitters",  col:"#183848", ings:["Champán","Campari","Jerez seco","Vermú rojo"]},
+];
+
+/* ══ AFFINITY MAP ══ */
+const AF={
+  "Ají limo|Limón sutil":{t:"c",mol:"ácidos cítricos",note:"El dúo que 'cocina' el ceviche. La capsaicina y el citral actúan en sinfonía sobre la proteína del pescado."},
+  "Chocolate 70%|Naranja":{t:"c",mol:"limoneno",note:"Segnit: el limoneno del zest atenúa el amargor del cacao y abre sus notas frutales. Clásico de la confitería francesa."},
+  "Café|Cardamomo":{t:"m",mol:"cineol + pirazinas",note:"Chartier: el 1,8-cineol del cardamomo neutraliza la amargura del café y fusiona con sus pirazinas tostadas. Ruta de la Seda en taza."},
+  "Café|Chocolate 70%":{t:"c",mol:"pirazinas compartidas",note:"Comparten la misma familia de pirazinas. El café amplifica el cacao y el cacao potencia el café."},
+  "Frambuesa|Pimienta negra":{t:"m",mol:"rotundona",note:"Chartier: la rotundona domina ambos ingredientes. Acorde frutal-picante de profundidad inesperada."},
+  "Chocolate 70%|Frambuesa":{t:"c",mol:"furaneol + pirazinas",note:"El furaneol de la frambuesa resuena con las pirazinas del cacao. Maridaje universal de la pastelería."},
+  "Trufa negra|Chocolate 70%":{t:"m",mol:"DMS, DMDS",note:"Chartier: el sulfuro de dimetilo (DMS) es clave en ambos. Eco de umami profundo en platos salados."},
+  "Coco|Ostras":{t:"s",mol:"lactonas de cadena media",note:"Food Pairing Lab: d-octalactona del coco armoniza con aminoácidos marinos de la ostra. Maridaje de Blumenthal."},
+  "Fresa|Eneldo":{t:"s",mol:"3-metil-2,4-ditiapentano",note:"Molécula azufrada compartida. Descubrimiento molecular que sacudió al mundo culinario en 2002."},
+  "Vainilla|Ostras":{t:"s",mol:"lactonas",note:"Chartier: las lactonas de la vainilla espejean las del crustáceo. Potencia el dulzor marino sin endulzar."},
+  "Café|Miso":{t:"m",mol:"furfural, sotolon",note:"Ambos fermentados ricos en furfural. El umami del miso eleva el café; el café añade profundidad tostada."},
+  "Lavanda|Frambuesa":{t:"c",mol:"linalool + furaneol",note:"Segnit: el linalool floral de la lavanda perfuma y eleva la acidez de la frambuesa. Provence en un bocado."},
+  "Yuzu|Trufa negra":{t:"s",mol:"citral + compuestos azufrados",note:"La acidez cítrica del yuzu corta y volatiliza los compuestos azufrados de la trufa."},
+  "Naranja|Romero":{t:"m",mol:"limoneno + borneol",note:"Terpenos cítricos y resinosos de estructura hermana. Resultado: cálido, mediterráneo, profundo."},
+  "Chocolate 70%|Queso azul":{t:"s",mol:"pirazinas + ácido isovalérico",note:"Segnit documenta: quesos azules comparten compuestos con el cacao a nivel molecular."},
+  "Cardamomo|Rosa":{t:"m",mol:"geraniol + cineol",note:"Chartier: el geraniol de la rosa y el cineol del cardamomo son terpenos hermanos. Oriente Medio."},
+  "Miso|Frambuesa":{t:"s",mol:"sotolon + furaneol",note:"El sotolon del miso y el furaneol de la frambuesa crean dulzor fermentado que potencia la fruta."},
+  "Manzana verde|Anís estrellado":{t:"m",mol:"estragol + hexanal",note:"Los aldehídos verdes de la manzana se amplifican con el estragol del anís."},
+  "Trufa negra|Ajo":{t:"c",mol:"DADS + DMDS",note:"Compuestos azufrados de distinta escala. El ajo amplifica la trufa sin opacarla."},
+  "Mantequilla|Trufa negra":{t:"c",mol:"lactonas + DMS",note:"La grasa captura y amplifica los volátiles de la trufa. El vehículo perfecto."},
+  "Parmesano|Trufa negra":{t:"c",mol:"glutamato + DMS",note:"Umami al cuadrado. El glutamato del parmesano y los sulfuros de la trufa crean sinergia absoluta."},
+  "Fresa|Estragón":{t:"m",mol:"furaneol + estragol",note:"Chartier: el estragol y el furaneol crean eco anisado-frutal. Segnit: 'una revelación'."},
+  "Cereza|Romero":{t:"m",mol:"benzaldehído + borneol",note:"Tensión entre frutal y resinoso que se resuelve con elegancia."},
+  "Ají amarillo|Coco":{t:"m",mol:"capsaicina + lactonas",note:"Las lactonas del coco suavizan el calor y potencian los ésteres frutales del ají. Sinergía nikkei."},
+  "Café|Queso azul":{t:"s",mol:"pirazinas + ácido isovalérico",note:"Las pirazinas del café se armonizan con las metilcetonas del queso azul. Contraste que equilibra."},
+  "Whisky añejo|Chocolate 70%":{t:"m",mol:"pirazinas, guayacol",note:"Chartier: el guayacol del whisky armoniza con las pirazinas del cacao. Maridaje de destilería."},
+  "Ron oscuro|Coco":{t:"c",mol:"lactonas, ésteres",note:"Las lactonas del ron y las del coco comparten estructura molecular. Raíz del cóctel de coco."},
+  "Champán|Ostras":{t:"c",mol:"acidez mineral, CO₂",note:"La mineralidad calcárea del Champán y el iodo de las ostras crean el maridaje más elegante."},
+  "Campari|Naranja":{t:"c",mol:"limoneno, naringina",note:"Limoneno y flavonoides cítricos forman un círculo aromático perfecto. Base del Negroni."},
+  "Champán|Frambuesa":{t:"c",mol:"furaneol, ácido tartárico",note:"La acidez del Champán y el furaneol de la frambuesa crean armonía primaveral en copa."},
+  "Jerez seco|Trufa negra":{t:"m",mol:"sotolon, DMS",note:"Chartier: sotolon del jerez oxidativo + compuestos azufrados de la trufa = puente de lujo."},
+  "Gin|Enebro":{t:"c",mol:"α-pineno, mirceno",note:"El gin ES el enebro en su destilación. Potenciar el ingrediente principal en su pureza."},
+  "Mezcal|Chocolate 70%":{t:"m",mol:"guayacol, pirazinas",note:"El guayacol ahumado del mezcal y las pirazinas del cacao negro crean armonía de dos mundos."},
+  "Remolacha|Naranja":{t:"m",mol:"geosmina + limoneno",note:"El limoneno de la naranja suaviza la geosmina terrosa. Segnit: 'tierra que recibe la primera lluvia'."},
+  "Canela|Manzana verde":{t:"c",mol:"cinamaldehído + hexanal",note:"Los aldehídos verdes de la manzana son realzados por el cinamaldehído de la canela."},
+};
+const affKey=(a,b)=>[a,b].sort().join("|");
+const getAff=(a,b)=>AF[affKey(a,b)];
+
+/* ══ SVG WHEEL MATH ══ */
+const CX=380,CY=380,R_SECTOR=170,R_LABEL=97,R_ING=178;
+const clockToRad=deg=>(deg-90)*Math.PI/180;
+const pt=(r,deg)=>[CX+r*Math.cos(clockToRad(deg)),CY+r*Math.sin(clockToRad(deg))];
+const slicePath=(s,e)=>{const[sx,sy]=pt(R_SECTOR,s),[ex,ey]=pt(R_SECTOR,e);return `M${CX} ${CY} L${sx} ${sy} A${R_SECTOR} ${R_SECTOR} 0 ${e-s>180?1:0} 1 ${ex} ${ey}Z`;};
+const arcForLabel=(s,e)=>{const mid=((s+e)/2%360+360)%360,cw=mid<90||mid>270,r=R_LABEL,[sx,sy]=pt(r,s),[ex,ey]=pt(r,e),la=e-s>180?1:0;return cw?`M${sx} ${sy} A${r} ${r} 0 ${la} 1 ${ex} ${ey}`:`M${ex} ${ey} A${r} ${r} 0 ${la} 0 ${sx} ${sy}`;};
+
+/* ══ HELPERS ══ */
+const gid=()=>Math.random().toString(36).substr(2,9);
+const pQty=(q,y)=>{const qn=parseFloat(q),yn=parseFloat(y);return(!yn||isNaN(qn))?0:qn/(yn/100);};
+const fmtN=(n,d=2)=>{const v=parseFloat(n);return isNaN(v)?"—":v.toLocaleString("es",{minimumFractionDigits:d,maximumFractionDigits:d});};
+const aggIng=recipe=>{const m={};recipe.steps.forEach(s=>s.ingredients.forEach(i=>{const k=`${i.name.trim()}__${i.unit}`;if(m[k])m[k]={...m[k],quantity:(parseFloat(m[k].quantity)||0)+(parseFloat(i.quantity)||0)};else m[k]={...i,key:k,quantity:parseFloat(i.quantity)||0};}));return Object.values(m);};
+
+/* ══ DEMO ══ */
+const DEMO_R=[{id:"r1",name:"Ceviche Clásico Limeño",category:"Pescados & Mariscos",portions:4,photo:null,cutlery:["fork_knife","spoon"],colls:["c1"],plating:"Plato tendido frío. Lechuga crespa lateral. Pescado curado al centro bañado en leche de tigre. Camote glaseado. Dispersión de choclo y cancha. Cilantro y ají limo como acabado.",steps:[
+  {id:"s1",name:"Marinado del Pescado",method:"Filetear el lenguado sin piel ni espinas. Dados uniformes 2×2 cm. Bowl de acero pre-enfriado en hielo. Salar y masajear 30 s. Agregar limón, mezclar suavemente 90 s hasta opacidad nacarada.",ingredients:[{id:"i1",name:"Lenguado fresco",quantity:600,unit:"g",yieldPct:80},{id:"i2",name:"Jugo de limón sutil",quantity:180,unit:"ml",yieldPct:70},{id:"i3",name:"Sal de mar fina",quantity:10,unit:"g",yieldPct:100}]},
+  {id:"s2",name:"Leche de Tigre",method:"Licuar ajo, jengibre, ají y cilantro con caldo frío. Colar con chino fino. Incorporar al bowl. Ajustar acidez y salinidad.",ingredients:[{id:"i4",name:"Ajo blanco",quantity:8,unit:"g",yieldPct:85},{id:"i5",name:"Jengibre fresco",quantity:5,unit:"g",yieldPct:88},{id:"i6",name:"Ají limo",quantity:25,unit:"g",yieldPct:75},{id:"i7",name:"Cilantro fresco",quantity:12,unit:"g",yieldPct:80},{id:"i8",name:"Caldo de pescado",quantity:100,unit:"ml",yieldPct:100}]},
+  {id:"s3",name:"Guarniciones",method:"Cebolla en pluma fina, enjuagar 3× agua fría. Camote: cocer desde agua fría, enfriar y glasear. Choclo: blanquear 3 min. Cancha: freír a 180°C.",ingredients:[{id:"i9",name:"Cebolla roja",quantity:80,unit:"g",yieldPct:88},{id:"i10",name:"Camote amarillo",quantity:240,unit:"g",yieldPct:82},{id:"i11",name:"Choclo peruano",quantity:160,unit:"g",yieldPct:62},{id:"i12",name:"Cancha serrana",quantity:40,unit:"g",yieldPct:100},{id:"i13",name:"Lechuga crespa",quantity:60,unit:"g",yieldPct:72}]},
+]}];
+const DEMO_C=[{id:"c1",name:"Firma",color:COLL_COLORS[0]},{id:"c2",name:"Menú Degustación",color:COLL_COLORS[1]}];
+
+/* ══════════════════════════════════════════
+   APP
+══════════════════════════════════════════ */
+
+/* ══ API KEY SETUP ══ */
+function ApiKeySetup({onSave}){
+  const[key,setKey]=useState("");
+  const[err,setErr]=useState("");
+  const save=()=>{
+    if(!key.trim().startsWith("sk-ant-")){setErr("Debe comenzar con sk-ant-");return;}
+    localStorage.setItem('mep_akey',key.trim());
+    onSave();
+  };
+  return(
+    <div style={{minHeight:"100vh",background:"#0A0F1A",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{background:"#fff",borderRadius:16,padding:"40px 44px",maxWidth:480,width:"100%",boxShadow:"0 24px 80px rgba(0,0,0,.3)"}}>
+        <p style={{fontFamily:"'Space Grotesk',sans-serif",fontSize:28,fontWeight:700,color:"#0A0F1A",margin:"0 0 6px"}}>🍽️ Mise en Place</p>
+        <p style={{fontFamily:"'Inter',sans-serif",fontSize:13,color:"#6B7280",margin:"0 0 28px",lineHeight:1.5}}>Para usar la IA necesitas tu Anthropic API key. Se guarda localmente en tu navegador — nunca sale de tu dispositivo.</p>
+        <label style={{fontFamily:"'Inter',sans-serif",fontSize:10,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:"#1B4FD8",display:"block",marginBottom:6}}>Anthropic API Key</label>
+        <input
+          type="password"
+          value={key}
+          onChange={e=>setKey(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&save()}
+          placeholder="sk-ant-api03-..."
+          style={{width:"100%",padding:"10px 14px",border:"1px solid #E5E7EB",borderRadius:8,fontFamily:"monospace",fontSize:13,outline:"none",boxSizing:"border-box",marginBottom:8}}
+          onFocus={e=>e.target.style.borderColor="#1B4FD8"}
+          onBlur={e=>e.target.style.borderColor="#E5E7EB"}
+          autoFocus
+        />
+        {err&&<p style={{fontFamily:"'Inter',sans-serif",fontSize:11,color:"#EF4444",margin:"0 0 8px"}}>{err}</p>}
+        <p style={{fontFamily:"'Inter',sans-serif",fontSize:11,color:"#9CA3AF",margin:"0 0 16px"}}>
+          Obtén tu key en{" "}
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" style={{color:"#1B4FD8"}}>console.anthropic.com</a>
+        </p>
+        <button onClick={save} style={{width:"100%",background:"#1B4FD8",color:"#fff",border:"none",borderRadius:8,padding:"12px",fontFamily:"'Inter',sans-serif",fontSize:14,fontWeight:600,cursor:"pointer"}}>
+          Guardar y continuar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const[hasKey,setHasKey]=useState(()=>!!localStorage.getItem('mep_akey'));
+  if(!hasKey) return <ApiKeySetup onSave={()=>setHasKey(true)}/>;
+  const[nav,setNav]=useState("recipes");
+  const[view,setView]=useState("gallery");
+  const[recipes,setRec]=useState(DEMO_R);
+  const[colls,setColls]=useState(DEMO_C);
+  const[selId,setSelId]=useState(null);
+  const[tab,setTab]=useState("recipe");
+  const[country,setCtry]=useState("PE");
+  const[prices,setPrices]=useState({});
+  const[search,setSearch]=useState("");
+  const[catF,setCatF]=useState("");
+  const sel=recipes.find(r=>r.id===selId);
+  const co=COUNTRIES.find(c=>c.code===country)||COUNTRIES[0];
+  const[editId,setEditId]=useState(null);
+  const openR=id=>{setSelId(id);setView("detail");setTab("recipe");setNav("recipes");};
+  const goBack=()=>{setView("gallery");setSelId(null);setEditId(null);};
+  const saveR=r=>{setRec(p=>[...p,{...r,id:gid()}]);goBack();};
+  const updR=r=>setRec(p=>p.map(x=>x.id===r.id?r:x));
+  const delR=id=>{setRec(p=>p.filter(r=>r.id!==id));goBack();};
+  const startEdit=id=>{setEditId(id);setSelId(id);setView("edit");};
+  const saveEdit=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));setView("detail");setEditId(null);};
+  const getP=k=>prices[selId]?.[country]?.[k]??"";
+  const setP=(k,v)=>setPrices(p=>({...p,[selId]:{...p[selId],[country]:{...p[selId]?.[country],[k]:v}}}));
+  const filt=recipes.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())&&(!catF||r.category===catF));
+  return(
+    <div style={{fontFamily:FB,background:G.bg,minHeight:"100vh",color:G.text}}>
+      <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")}/>
+      {nav==="recipes"&&<>
+        {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{setRec(p=>[...p,{...r,id:gid()}]);}} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
+        {view==="detail"&&sel&&<Detail recipe={sel} tab={tab} setTab={setTab} country={country} setCountry={setCtry} co={co} getP={getP} setP={setP} onDelete={()=>delR(sel.id)} colls={colls} onUpdate={updR} onEdit={()=>startEdit(sel.id)}/>}
+        {view==="add"&&<AddRecipe onSave={saveR} onCancel={goBack} colls={colls}/>}
+        {view==="edit"&&recipes.find(r=>r.id===editId)&&<AddRecipe initialRecipe={recipes.find(r=>r.id===editId)} onSave={saveEdit} onCancel={()=>setView("detail")} colls={colls}/>}
+      </>}
+      {nav==="organize"&&<Organize recipes={recipes} colls={colls} setColls={setColls} onOpen={openR}/>}
+      {nav==="lab"&&<FlavorLab recipes={recipes} onAddRecipe={r=>setRec(p=>[...p,{...r,id:gid()}])} onOpenRecipes={()=>{setNav("recipes");setView("gallery");}}/>}
+    </div>
+  );
+}
+
+/* ══ TOP BAR ══ */
+function TopBar({nav,setNav,view,onBack,recName,onAdd}){
+  return(
+    <header style={{background:G.w,borderBottom:`1px solid ${G.brd}`,padding:"0 32px",height:56,display:"flex",alignItems:"center",gap:20,position:"sticky",top:0,zIndex:100}}>
+      {nav==="recipes"&&view!=="gallery"&&
+        <button onClick={onBack} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontFamily:FB,fontSize:12,display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:4}}
+          onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=G.textMut}>
+          ← Volver
+        </button>}
+      <span style={{fontFamily:FH,fontSize:15,color:G.text,letterSpacing:4,fontWeight:700,flexShrink:0}}>
+        MISE EN PLACE
+      </span>
+      {recName&&<><span style={{color:G.brd,fontSize:14}}>·</span>
+        <span style={{fontFamily:FB,fontSize:12,color:G.textMut,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:220}}>{recName}</span></>}
+      <nav style={{display:"flex",gap:0,marginLeft:"auto",alignItems:"center"}}>
+        {[["recipes","Recetas"],["organize","Colecciones"],["lab","Laboratorio"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setNav(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:500,padding:"8px 16px",color:nav===id?G.blue:G.textMid,borderBottom:nav===id?`2px solid ${G.blue}`:"2px solid transparent",transition:"all .18s"}}>
+            {label}
+          </button>
+        ))}
+        {nav==="recipes"&&view==="gallery"&&
+          <button onClick={onAdd} style={{...bv("p",{padding:"7px 16px",fontSize:11,fontWeight:700,marginLeft:12,borderRadius:6,letterSpacing:.5})}}
+            onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+            + Nueva Receta
+          </button>}
+      </nav>
+    </header>
+  );
+}
+
+/* ══ GALLERY ══ */
+function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImport}){
+  const[showImport,setShowImport]=useState(false);
+  return(
+    <div style={{maxWidth:1200,margin:"0 auto",padding:"48px 32px"}}>
+      {showImport&&<ImportModal onClose={()=>setShowImport(false)} onImport={r=>{onImport&&onImport(r);setShowImport(false);}} colls={colls}/>}
+      <div style={{marginBottom:36}}>
+        <p style={{fontFamily:FB,fontSize:11,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Archivo de Recetas</p>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:12}}>
+          <h1 style={{fontFamily:FH,fontSize:38,color:G.text,fontWeight:700,letterSpacing:-.5}}>{total} receta{total!==1?"s":""} archivadas</h1>
+          <button onClick={()=>setShowImport(true)} style={bv("ghost",{padding:"8px 16px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>📥 Importar receta</button>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap"}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar receta…" style={inp({flex:1,minWidth:160})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+        <select value={catF} onChange={e=>setCatF(e.target.value)} style={inp({width:"auto",cursor:"pointer"})}>
+          <option value="">Todas las categorías</option>
+          {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+        </select>
+      </div>
+      {recipes.length===0
+        ?<div style={{textAlign:"center",padding:"80px 0",color:G.textMut}}>
+            <p style={{fontFamily:FH,fontSize:22,color:G.text,margin:"0 0 8px",fontWeight:700}}>Sin resultados</p>
+            <p style={{fontSize:12}}>Agrega tu primera receta con el botón superior derecho</p>
+          </div>
+        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:20}}>
+            {recipes.map(r=><RecipeCard key={r.id} recipe={r} onOpen={()=>onOpen(r.id)} colls={colls}/>)}
+          </div>}
+    </div>
+  );
+}
+
+function RecipeCard({recipe,onOpen,colls}){
+  const[hov,setHov]=useState(false);
+  const cuts=CUTLERY.filter(c=>recipe.cutlery?.includes(c.id)).map(c=>c.icon).join(" ");
+  const rc=recipe.colls?.map(cid=>colls?.find(c=>c.id===cid)).filter(Boolean)||[];
+  return(
+    <div onClick={onOpen} onMouseOver={()=>setHov(true)} onMouseOut={()=>setHov(false)}
+      style={{background:G.w,border:`1px solid ${hov?G.brdL:G.brd}`,borderRadius:10,cursor:"pointer",overflow:"hidden",transition:"all .22s",transform:hov?"translateY(-2px)":"none",boxShadow:hov?"0 8px 24px rgba(27,79,216,.08)":"0 1px 4px rgba(0,0,0,.04)"}}>
+      <div style={{height:170,background:G.surf,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative"}}>
+        {recipe.photo?<img src={recipe.photo} alt={recipe.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+          :<span style={{fontFamily:FH,fontSize:48,color:G.brd,fontWeight:700,letterSpacing:-2}}>{recipe.name.charAt(0)}</span>}
+        <div style={{position:"absolute",top:10,left:12,background:G.blueTint,border:`1px solid ${G.blue}22`,padding:"2px 9px",borderRadius:20,fontSize:9,color:G.blue,fontFamily:FB,fontWeight:600,letterSpacing:.5}}>
+          {recipe.category}
+        </div>
+        {rc.length>0&&<div style={{position:"absolute",bottom:10,left:12,display:"flex",gap:4}}>
+          {rc.map(c=><span key={c.id} style={{background:c.color+"18",border:`1px solid ${c.color}44`,padding:"2px 7px",borderRadius:10,fontSize:9,color:c.color,fontWeight:600}}>{c.name}</span>)}
+        </div>}
+      </div>
+      <div style={{padding:"16px 18px 18px"}}>
+        <h3 style={{fontFamily:FH,fontSize:17,color:G.text,margin:"0 0 8px",fontWeight:700,lineHeight:1.25}}>{recipe.name}</h3>
+        <div style={{display:"flex",gap:12,color:G.textMut,fontSize:10,fontFamily:FB}}>
+          <span>{recipe.portions} porciones</span>
+          {cuts&&<span>{cuts}</span>}
+          <span>{recipe.steps?.length||0} pasos</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══ DETAIL ══ */
+function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,colls,onUpdate,onEdit}){
+  const cuts=CUTLERY.filter(c=>recipe.cutlery?.includes(c.id));
+  const toggleColl=cid=>{const nc=recipe.colls?.includes(cid)?recipe.colls.filter(c=>c!==cid):[...(recipe.colls||[]),cid];onUpdate({...recipe,colls:nc});};
+  return(
+    <div style={{maxWidth:1100,margin:"0 auto",padding:"40px 32px"}}>
+      <div style={{display:"flex",gap:28,marginBottom:32,flexWrap:"wrap"}}>
+        <div style={{flex:"0 0 240px",height:200,background:G.surf,borderRadius:10,border:`1px solid ${G.brd}`,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+          {recipe.photo?<img src={recipe.photo} alt={recipe.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+            :<span style={{fontFamily:FH,fontSize:56,color:G.brd,fontWeight:700}}>{recipe.name.charAt(0)}</span>}
+        </div>
+        <div style={{flex:1}}>
+          <p style={{fontFamily:FB,fontSize:10,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>{recipe.category}</p>
+          <h1 style={{fontFamily:FH,fontSize:30,color:G.text,margin:"0 0 16px",fontWeight:700,letterSpacing:-.5,lineHeight:1.1}}>{recipe.name}</h1>
+          <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+            {[`${recipe.portions} porciones`,`${recipe.steps.length} pasos`,...(cuts.length?[cuts.map(c=>c.icon+" "+c.label).join(", ")]:[])].map(l=>(
+              <span key={l} style={{background:G.surf,border:`1px solid ${G.brd}`,padding:"4px 12px",borderRadius:20,fontSize:10,color:G.textMid,fontFamily:FB}}>{l}</span>
+            ))}
+          </div>
+          <div style={{marginBottom:16}}>
+            <p style={{fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:G.textMut,marginBottom:6,fontFamily:FB}}>Colecciones</p>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {colls.map(c=>{const act=recipe.colls?.includes(c.id);return(
+                <button key={c.id} onClick={()=>toggleColl(c.id)} style={{background:act?c.color+"15":"transparent",border:`1px solid ${act?c.color:G.brd}`,color:act?c.color:G.textMut,padding:"3px 10px",borderRadius:20,cursor:"pointer",fontFamily:FB,fontSize:10,fontWeight:600,transition:"all .15s"}}>
+                  {act?"✓ ":""}{c.name}
+                </button>
+              );})}
+            </div>
+          </div>
+          {recipe.plating&&<div style={{background:G.blueTint,border:`1px solid ${G.blue}20`,borderRadius:8,padding:"12px 16px"}}>
+            <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:5,fontFamily:FB}}>Emplatado</p>
+            <p style={{margin:0,fontSize:12,color:G.textMid,lineHeight:1.7,fontFamily:FB}}>{recipe.plating}</p>
+          </div>}
+        </div>
+      </div>
+      <div style={{display:"flex",borderBottom:`1px solid ${G.brd}`,marginBottom:28}}>
+        {[["recipe","Receta"],["costing","Costeo"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:600,padding:"10px 20px",color:tab===id?G.blue:G.textMut,borderBottom:tab===id?`2px solid ${G.blue}`:"2px solid transparent",transition:"all .15s",marginBottom:-1}}>
+            {label}
+          </button>
+        ))}
+        <div style={{flex:1}}/>
+        <button onClick={onEdit} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:6,marginRight:6})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>✏️ Editar</button>
+        <button onClick={onDelete} style={{...bv("ghost",{fontSize:10,color:G.red,borderColor:G.red+"44",padding:"4px 12px",alignSelf:"center",borderRadius:6})}}
+          onMouseOver={e=>e.currentTarget.style.background=G.red+"08"} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
+          Eliminar
+        </button>
+      </div>
+      {tab==="recipe"&&<RecipeTab recipe={recipe}/>}
+      {tab==="costing"&&<CosteoTab recipe={recipe} country={country} setCountry={setCountry} co={co} getP={getP} setP={setP}/>}
+    </div>
+  );
+}
+
+function RecipeTab({recipe}){
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      {recipe.steps.map((step,idx)=>(
+        <div key={step.id} style={{border:`1px solid ${G.brd}`,borderRadius:10,overflow:"hidden"}}>
+          <div style={{background:G.surf,borderBottom:`1px solid ${G.brd}`,padding:"12px 20px",display:"flex",alignItems:"center",gap:12}}>
+            <span style={{background:G.blue,color:G.w,width:24,height:24,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,flexShrink:0,fontFamily:FH}}>{idx+1}</span>
+            <span style={{fontFamily:FH,fontSize:16,color:G.text,fontWeight:700}}>{step.name}</span>
+          </div>
+          <div style={{padding:"20px",display:"flex",gap:24,flexWrap:"wrap",background:G.w}}>
+            <div style={{flex:"0 0 280px",minWidth:180}}>
+              <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:10,fontFamily:FB}}>Ingredientes</p>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr style={{borderBottom:`1px solid ${G.brd}`}}>
+                  {["Ingrediente","Cant.","Unid.","Rend."].map(h=><th key={h} style={{textAlign:"left",padding:"4px 5px",fontSize:9,color:G.textMut,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",fontFamily:FB}}>{h}</th>)}
+                </tr></thead>
+                <tbody>{step.ingredients.map(i=>(
+                  <tr key={i.id} style={{borderBottom:`1px solid ${G.brd}`}}>
+                    <td style={{padding:"6px 5px",fontSize:12,color:G.text,fontFamily:FB}}>{i.name}</td>
+                    <td style={{padding:"6px 5px",fontSize:12,color:G.textMid,textAlign:"right",fontFamily:FB}}>{fmtN(i.quantity,2)}</td>
+                    <td style={{padding:"6px 5px",fontSize:11,color:G.textMut,fontFamily:FB}}>{i.unit}</td>
+                    <td style={{padding:"6px 5px",fontSize:11,color:G.blue,textAlign:"right",fontFamily:FB,fontWeight:500}}>{i.yieldPct}%</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            </div>
+            <div style={{flex:1,minWidth:180}}>
+              <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:10,fontFamily:FB}}>Metodología</p>
+              <p style={{margin:0,fontSize:12,color:G.textMid,lineHeight:1.8,fontFamily:FB}}>{step.method}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CosteoTab({recipe,country,setCountry,co,getP,setP}){
+  const ings=aggIng(recipe);
+  const rows=ings.map(i=>{const pq=pQty(i.quantity,i.yieldPct),pr=parseFloat(getP(i.key));return{...i,pq,pr,sub:isNaN(pr)?null:pq*pr};});
+  const total=rows.reduce((a,r)=>a+(r.sub||0),0);
+  return(
+    <div>
+      <div style={{background:G.blueTint,border:`1px solid ${G.blue}20`,borderRadius:8,padding:"14px 20px",marginBottom:20,display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+        <div>
+          <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:5,fontFamily:FB}}>País / Moneda</p>
+          <select value={country} onChange={e=>setCountry(e.target.value)} style={inp({width:220,cursor:"pointer"})}>
+            {COUNTRIES.map(c=><option key={c.code} value={c.code}>{c.name} — {c.currency} ({c.symbol})</option>)}
+          </select>
+        </div>
+        <p style={{color:G.textMut,fontSize:11,margin:0,flex:1,fontFamily:FB}}>La <strong style={{color:G.blue}}>Cant. Compra</strong> incluye merma según el rendimiento declarado en receta.</p>
+      </div>
+      <div style={{overflowX:"auto",borderRadius:10,border:`1px solid ${G.brd}`}}>
+        <table style={{width:"100%",borderCollapse:"collapse",minWidth:640}}>
+          <thead><tr style={{background:G.surf}}>{["Ingrediente","Cant. Receta","Unidad","Rend. %","Cant. Compra",`Precio/Unidad (${co.symbol})`,`Subtotal (${co.symbol})`].map(h=>(
+            <th key={h} style={{textAlign:h==="Ingrediente"?"left":"right",padding:"10px 14px",fontSize:9,color:G.textMut,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",borderBottom:`1px solid ${G.brd}`,whiteSpace:"nowrap",fontFamily:FB}}>{h}</th>
+          ))}</tr></thead>
+          <tbody>{rows.map((r,idx)=>(
+            <tr key={r.key} style={{borderBottom:`1px solid ${G.brd}`,background:idx%2===0?G.w:G.surf}}>
+              <td style={{padding:"10px 14px",fontSize:12,color:G.text,fontFamily:FB}}>{r.name}</td>
+              <td style={{padding:"10px 14px",fontSize:12,color:G.textMid,textAlign:"right",fontFamily:FB}}>{fmtN(r.quantity,2)}</td>
+              <td style={{padding:"10px 14px",fontSize:11,color:G.textMut,textAlign:"right",fontFamily:FB}}>{r.unit}</td>
+              <td style={{padding:"10px 14px",fontSize:11,color:G.blue,textAlign:"right",fontFamily:FB,fontWeight:500}}>{r.yieldPct}%</td>
+              <td style={{padding:"10px 14px",fontSize:12,color:G.blue,textAlign:"right",fontFamily:FB,fontWeight:600}}>{fmtN(r.pq,3)}</td>
+              <td style={{padding:"5px 14px",textAlign:"right"}}>
+                <input type="number" min="0" step="0.01" value={getP(r.key)} onChange={e=>setP(r.key,e.target.value)} placeholder="0.00"
+                  style={inp({width:96,textAlign:"right",padding:"5px 8px"})}/>
+              </td>
+              <td style={{padding:"10px 14px",fontSize:12,textAlign:"right",color:r.sub!=null?G.text:G.textMut,fontWeight:r.sub!=null?600:400,fontFamily:FB}}>
+                {r.sub!=null?`${co.symbol} ${fmtN(r.sub,2)}`:"—"}
+              </td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:20}}>
+        <div style={{border:`1px solid ${G.brd}`,borderRadius:10,padding:"20px 24px",minWidth:280}}>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:10,paddingBottom:10,borderBottom:`1px solid ${G.brd}`}}>
+            <span style={{color:G.textMid,fontSize:12,fontFamily:FB}}>Costo Total ({recipe.portions} porciones)</span>
+            <span style={{color:G.text,fontSize:18,fontWeight:700,fontFamily:FH}}>{co.symbol} {fmtN(total,2)}</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between"}}>
+            <span style={{color:G.textMid,fontSize:12,fontFamily:FB}}>Costo por Porción</span>
+            <span style={{color:G.blue,fontSize:22,fontWeight:700,fontFamily:FH}}>{co.symbol} {fmtN(recipe.portions>0?total/recipe.portions:0,2)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══ ADD RECIPE ══ */
+const eStep=()=>({id:gid(),name:"",method:"",ingredients:[eIng()]});
+const eIng=()=>({id:gid(),name:"",quantity:"",unit:"g",yieldPct:100});
+/* ══ IMPORT MODAL ══ */
+function ImportModal({onClose,onImport,colls}){
+  const[tab,setTab]=useState("file");
+  const[loading,setLoading]=useState(false);
+  const[preview,setPreview]=useState(null);
+  const[error,setError]=useState("");
+  const[urlVal,setUrlVal]=useState("");
+  const[textVal,setTextVal]=useState("");
+  const fileRef=useRef();
+  const batchRef=useRef();
+  // Batch state
+  const[batchFiles,setBatchFiles]=useState([]);   // [{file, status:'pending'|'ok'|'error', name, error}]
+  const[batchRunning,setBatchRunning]=useState(false);
+  const[batchDone,setBatchDone]=useState(0);
+  const[batchSaved,setBatchSaved]=useState(0);
+  const[batchFinished,setBatchFinished]=useState(false);
+
+  const EXTRACT_PROMPT=`Extrae la receta completa. Responde SOLO con JSON válido (sin texto extra):
+{"name":"Nombre","category":"Categoría","portions":4,"plating":"Emplatado","cutlery":["fork_knife"],"steps":[{"name":"Paso","method":"Metodología","ingredients":[{"name":"Ingrediente","quantity":200,"unit":"g","yieldPct":90}]}]}`;
+
+  const normalize=p=>({...p,id:gid(),photo:null,colls:[],
+    steps:(p.steps||[]).map(s=>({...s,id:gid(),
+      ingredients:(s.ingredients||[]).map(i=>({...i,id:gid()}))}))});
+
+  const toBase64=file=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
+  const toText=file=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(file);});
+
+  const extractOne=async(file)=>{
+    const isPDF=file.type==="application/pdf";
+    const isImg=file.type.startsWith("image/");
+    const isExcel=file.name.match(/\.xlsx?$|\.csv$/i);
+    const isWord=file.name.match(/\.docx?$/i);
+    let messages;
+    if(isPDF){
+      const b64=await toBase64(file);
+      messages=[{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},{type:"text",text:EXTRACT_PROMPT}]}];
+    } else if(isImg){
+      const b64=await toBase64(file);
+      messages=[{role:"user",content:[{type:"image",source:{type:"base64",media_type:file.type,data:b64}},{type:"text",text:EXTRACT_PROMPT}]}];
+    } else {
+      const text=await toText(file);
+      messages=[{role:"user",content:EXTRACT_PROMPT+"\n\nContenido:\n"+text.slice(0,8000)}];
+    }
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),
+      body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,
+        system:"Chef experto. Responde SOLO JSON válido, sin texto extra.",messages})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data?.error?.message||`Error ${res.status}`);
+    const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
+    const m=raw.match(/\{[\s\S]*\}/);
+    return JSON.parse(m?m[0]:raw);
+  };
+
+  // Single file import (with preview)
+  const importFile=async(file)=>{
+    setLoading(true);setError("");setPreview(null);
+    try{ const p=await extractOne(file); setPreview(normalize(p)); }
+    catch(e){ setError("Error: "+e.message); }
+    setLoading(false);
+  };
+
+  // BATCH import
+  const startBatch=async()=>{
+    if(batchFiles.length===0)return;
+    setBatchRunning(true);setBatchDone(0);setBatchSaved(0);setBatchFinished(false);
+    let saved=0;
+    const updated=[...batchFiles];
+    for(let i=0;i<updated.length;i++){
+      updated[i]={...updated[i],status:"processing"};
+      setBatchFiles([...updated]);
+      try{
+        const parsed=await extractOne(updated[i].file);
+        const recipe=normalize(parsed);
+        onImport(recipe);
+        updated[i]={...updated[i],status:"ok",recipeName:parsed.name};
+        saved++;
+        setBatchSaved(saved);
+      }catch(e){
+        updated[i]={...updated[i],status:"error",errorMsg:e.message};
+      }
+      setBatchDone(i+1);
+      setBatchFiles([...updated]);
+      // Small delay to avoid rate limits
+      if(i<updated.length-1)await new Promise(r=>setTimeout(r,800));
+    }
+    setBatchRunning(false);setBatchFinished(true);
+  };
+
+  const addBatchFiles=files=>{
+    const arr=Array.from(files).map(f=>({file:f,status:"pending",name:f.name}));
+    setBatchFiles(p=>[...p,...arr]);setBatchFinished(false);
+  };
+
+  const removeBatchFile=idx=>setBatchFiles(p=>p.filter((_,i)=>i!==idx));
+
+  // URL import
+  const importURL=async()=>{
+    if(!urlVal.trim()){setError("Ingresa una URL");return;}
+    setLoading(true);setError("");setPreview(null);
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,
+          tools:[{type:"web_search_20250305",name:"web_search"}],
+          system:"Chef experto. Busca la receta y devuelve SOLO JSON válido.",
+          messages:[{role:"user",content:"Extrae la receta de: "+urlVal+"\n\n"+EXTRACT_PROMPT}]})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data?.error?.message||"Error API");
+      const raw=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("").replace(/```json\n?|```\n?/g,"").trim();
+      const m=raw.match(/\{[\s\S]*\}/);
+      setPreview(normalize(JSON.parse(m?m[0]:raw)));
+    }catch(e){setError("Error: "+e.message);}
+    setLoading(false);
+  };
+
+  // Text import (single or multi)
+  const importText=async()=>{
+    if(!textVal.trim()){setError("Pega el texto");return;}
+    setLoading(true);setError("");setPreview(null);
+    const hasMultiple=textVal.includes("---");
+    try{
+      if(hasMultiple){
+        const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),
+          body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:4000,
+            system:"Chef experto. Responde SOLO con array JSON válido, sin texto extra.",
+            messages:[{role:"user",content:`Este texto contiene MÚLTIPLES recetas separadas por "---". Extráelas TODAS como array JSON:\n[{receta1},{receta2},...]\n\nCada receta con formato:\n{"name":"...","category":"...","portions":4,"plating":"...","cutlery":["fork_knife"],"steps":[{"name":"...","method":"...","ingredients":[{"name":"...","quantity":100,"unit":"g","yieldPct":90}]}]}\n\nTexto:\n${textVal.slice(0,12000)}`}]})});
+        const data=await res.json();
+        if(!res.ok)throw new Error(data?.error?.message||"Error");
+        const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
+        const m=raw.match(/\[[\s\S]*\]/);
+        const arr=JSON.parse(m?m[0]:raw);
+        arr.forEach(p=>onImport(normalize(p)));
+        setPreview({_multi:true,_count:arr.length});
+      } else {
+        const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),
+          body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,
+            system:"Chef experto. Responde SOLO JSON válido.",
+            messages:[{role:"user",content:EXTRACT_PROMPT+"\n\nTexto:\n"+textVal.slice(0,8000)}]})});
+        const data=await res.json();
+        if(!res.ok)throw new Error(data?.error?.message||"Error");
+        const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
+        const m=raw.match(/\{[\s\S]*\}/);
+        setPreview(normalize(JSON.parse(m?m[0]:raw)));
+      }
+    }catch(e){setError("Error: "+e.message);}
+    setLoading(false);
+  };
+
+  const TABS=[["file","📄 Archivo"],["batch","📦 Carga Masiva"],["url","🔗 URL / Video"],["text","📝 Texto"]];
+  const pct=batchFiles.length>0?Math.round(batchDone/batchFiles.length*100):0;
+  const statusIcon=s=>s==="ok"?"✅":s==="error"?"❌":s==="processing"?"⏳":"⬜";
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
+      <div style={{background:G.w,borderRadius:16,width:"100%",maxWidth:640,maxHeight:"92vh",overflow:"auto",boxShadow:"0 24px 80px rgba(0,0,0,.25)"}} onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div style={{padding:"18px 24px 14px",borderBottom:`1px solid ${G.brd}`,display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,background:G.w,zIndex:1}}>
+          <div>
+            <h3 style={{fontFamily:FH,fontSize:20,color:G.text,margin:"0 0 2px",fontWeight:700}}>Importar Recetas</h3>
+            <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>Individual o carga masiva — PDF · Word · Excel · Foto · URL · Texto</p>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:G.textMut}}>✕</button>
+        </div>
+        {/* Tabs */}
+        <div style={{display:"flex",borderBottom:`1px solid ${G.brd}`,padding:"0 24px",overflowX:"auto"}}>
+          {TABS.map(([id,label])=>(
+            <button key={id} onClick={()=>{setTab(id);setError("");setPreview(null);}} style={{background:"none",border:"none",cursor:"pointer",padding:"10px 14px",fontFamily:FB,fontSize:12,fontWeight:600,color:tab===id?G.blue:G.textMut,borderBottom:tab===id?`2px solid ${G.blue}`:"2px solid transparent",marginBottom:-1,whiteSpace:"nowrap"}}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {/* Body */}
+        <div style={{padding:"20px 24px"}}>
+
+          {/* ─── SINGLE FILE ─── */}
+          {tab==="file"&&(
+            <div>
+              <p style={{fontFamily:FB,fontSize:12,color:G.textMid,marginBottom:14,lineHeight:1.6}}>Sube un archivo con tu receta. Soporta <strong>PDF</strong>, <strong>Word</strong>, <strong>Excel</strong>, <strong>foto</strong> (incluso escrita a mano).</p>
+              <input type="file" ref={fileRef} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic" style={{display:"none"}} onChange={e=>e.target.files[0]&&importFile(e.target.files[0])}/>
+              <button onClick={()=>fileRef.current.click()} disabled={loading} style={{...bv("p",{padding:"14px",borderRadius:8,fontSize:13,width:"100%",textAlign:"center",opacity:loading?.6:1})}} onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                {loading?"⏳ Analizando con IA…":"📁 Seleccionar archivo"}
+              </button>
+            </div>
+          )}
+
+          {/* ─── BATCH ─── */}
+          {tab==="batch"&&(
+            <div>
+              <p style={{fontFamily:FB,fontSize:12,color:G.textMid,marginBottom:14,lineHeight:1.6}}>
+                Selecciona <strong>múltiples archivos</strong> de golpe. La app los procesa en cola automáticamente y guarda cada receta exitosa en tu repositorio.
+              </p>
+              {/* Drop zone */}
+              {!batchRunning&&!batchFinished&&(
+                <div
+                  onClick={()=>batchRef.current.click()}
+                  onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=G.blue;e.currentTarget.style.background=G.blueTint;}}
+                  onDragLeave={e=>{e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.background=G.surf;}}
+                  onDrop={e=>{e.preventDefault();addBatchFiles(e.dataTransfer.files);e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.background=G.surf;}}
+                  style={{border:`2px dashed ${G.brd}`,borderRadius:10,padding:"28px",textAlign:"center",cursor:"pointer",background:G.surf,marginBottom:14,transition:"all .15s"}}>
+                  <p style={{fontFamily:FH,fontSize:22,margin:"0 0 6px"}}>📂</p>
+                  <p style={{fontFamily:FH,fontSize:15,color:G.text,margin:"0 0 4px",fontWeight:700}}>Arrastra aquí tus archivos</p>
+                  <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>o haz clic para seleccionar — PDF, Word, Excel, fotos</p>
+                </div>
+              )}
+              <input type="file" ref={batchRef} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic" style={{display:"none"}} onChange={e=>addBatchFiles(e.target.files)}/>
+
+              {/* File queue */}
+              {batchFiles.length>0&&(
+                <div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <p style={{fontFamily:FB,fontSize:11,color:G.textMid,margin:0,fontWeight:600}}>{batchFiles.length} archivo{batchFiles.length!==1?"s":""} en cola</p>
+                    {!batchRunning&&!batchFinished&&<button onClick={()=>setBatchFiles([])} style={{...bv("ghost",{fontSize:10,padding:"3px 10px",borderRadius:4,color:G.red})}} onMouseOver={e=>e.currentTarget.style.background=G.red+"08"} onMouseOut={e=>e.currentTarget.style.background="transparent"}>Limpiar todo</button>}
+                  </div>
+                  {/* Progress bar */}
+                  {(batchRunning||batchFinished)&&(
+                    <div style={{marginBottom:12}}>
+                      <div style={{background:G.brd,borderRadius:20,height:8,overflow:"hidden",marginBottom:6}}>
+                        <div style={{width:pct+"%",background:batchFinished?G.green:G.blue,height:"100%",transition:"width .4s",borderRadius:20}}/>
+                      </div>
+                      <p style={{fontFamily:FB,fontSize:11,color:G.textMid,margin:0}}>
+                        {batchFinished
+                          ?`✅ Completado — ${batchSaved} receta${batchSaved!==1?"s":""} importada${batchSaved!==1?"s":""}, ${batchFiles.filter(f=>f.status==="error").length} con error`
+                          :`Procesando ${batchDone} de ${batchFiles.length}…`}
+                      </p>
+                    </div>
+                  )}
+                  {/* File list */}
+                  <div style={{maxHeight:260,overflowY:"auto",border:`1px solid ${G.brd}`,borderRadius:8,marginBottom:14}}>
+                    {batchFiles.map((f,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderBottom:i<batchFiles.length-1?`1px solid ${G.brd}`:"none",background:f.status==="ok"?G.green+"08":f.status==="error"?G.red+"08":"transparent"}}>
+                        <span style={{fontSize:14,flexShrink:0}}>{statusIcon(f.status)}</span>
+                        <div style={{flex:1,minWidth:0}}>
+                          <p style={{fontFamily:FB,fontSize:12,color:G.text,margin:0,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.recipeName||f.name}</p>
+                          {f.status==="error"&&<p style={{fontFamily:FB,fontSize:10,color:G.red,margin:0}}>{f.errorMsg}</p>}
+                          {f.status==="ok"&&f.recipeName!==f.name&&<p style={{fontFamily:FB,fontSize:10,color:G.green,margin:0}}>{f.name}</p>}
+                        </div>
+                        {!batchRunning&&f.status==="pending"&&<button onClick={()=>removeBatchFile(i)} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontSize:14,padding:"2px 4px"}} onMouseOver={e=>e.currentTarget.style.color=G.red} onMouseOut={e=>e.currentTarget.style.color=G.textMut}>✕</button>}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Actions */}
+                  {!batchRunning&&!batchFinished&&(
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={startBatch} style={bv("p",{padding:"10px 20px",borderRadius:8,flex:1,fontSize:13})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                        ▶ Importar {batchFiles.length} receta{batchFiles.length!==1?"s":""}
+                      </button>
+                      <button onClick={()=>batchRef.current.click()} style={bv("ghost",{padding:"10px 16px",borderRadius:8,fontSize:12})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>+ Agregar más</button>
+                    </div>
+                  )}
+                  {batchFinished&&(
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={onClose} style={bv("p",{padding:"10px 20px",borderRadius:8,flex:1,fontSize:13})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>Ver repositorio</button>
+                      <button onClick={()=>{setBatchFiles([]);setBatchFinished(false);setBatchDone(0);setBatchSaved(0);}} style={bv("ghost",{padding:"10px 16px",borderRadius:8,fontSize:12})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>Nueva carga</button>
+                    </div>
+                  )}
+                </div>
+              )}
+              {batchFiles.length===0&&<p style={{fontFamily:FB,fontSize:11,color:G.textMut,textAlign:"center",marginTop:8}}>Consejo: también puedes arrastrar archivos directamente al área de arriba</p>}
+            </div>
+          )}
+
+          {/* ─── URL ─── */}
+          {tab==="url"&&(
+            <div>
+              <p style={{fontFamily:FB,fontSize:12,color:G.textMid,marginBottom:12,lineHeight:1.6}}>Pega la URL de un video de <strong>TikTok</strong>, <strong>Instagram</strong>, <strong>YouTube</strong>, o cualquier web con la receta.</p>
+              <div style={{display:"flex",gap:8,marginBottom:8}}>
+                <input value={urlVal} onChange={e=>setUrlVal(e.target.value)} onKeyDown={e=>e.key==="Enter"&&importURL()} placeholder="https://www.tiktok.com/@chef/video/..." style={inp({flex:1,fontSize:12})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                <button onClick={importURL} disabled={loading} style={bv("p",{padding:"9px 16px",borderRadius:6,opacity:loading?.6:1})} onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>{loading?"⏳":"Extraer"}</button>
+              </div>
+            </div>
+          )}
+
+          {/* ─── TEXT ─── */}
+          {tab==="text"&&(
+            <div>
+              <div style={{background:G.blueTint,border:`1px solid ${G.blue}22`,borderRadius:8,padding:"10px 14px",marginBottom:12}}>
+                <p style={{fontFamily:FB,fontSize:11,color:G.blue,margin:0,lineHeight:1.5}}>💡 <strong>Carga múltiple por texto:</strong> pega varias recetas en el campo de abajo separadas por <code>---</code> y las importará todas de una sola vez.</p>
+              </div>
+              <textarea value={textVal} onChange={e=>setTextVal(e.target.value)} rows={9} placeholder={"Receta 1: Ceviche de corvina\nIngredientes: 500g corvina...\n\n---\n\nReceta 2: Lomo saltado\nIngredientes: 400g lomo..."} style={inp({resize:"vertical",fontSize:12,lineHeight:1.6,marginBottom:8,fontFamily:"monospace"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+              <button onClick={importText} disabled={loading||!textVal.trim()} style={bv("p",{padding:"9px 20px",borderRadius:6,width:"100%",opacity:(loading||!textVal.trim())?.5:1})} onMouseOver={e=>{if(!loading&&textVal.trim())e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                {loading?"Estructurando…":textVal.includes("---")?"Importar todas las recetas":"Importar receta"}
+              </button>
+            </div>
+          )}
+
+          {/* Error */}
+          {error&&<p style={{color:G.red,fontSize:12,fontFamily:FB,marginTop:12,padding:"8px 12px",background:G.red+"08",borderRadius:6}}>{error}</p>}
+
+          {/* Preview (single) */}
+          {preview&&!preview._multi&&(
+            <div style={{marginTop:16,border:`1px solid ${G.blue}33`,borderRadius:10,overflow:"hidden"}}>
+              <div style={{background:G.blueTint,padding:"12px 16px",borderBottom:`1px solid ${G.blue}22`}}>
+                <p style={{fontFamily:FB,fontSize:9,color:G.blue,letterSpacing:2,textTransform:"uppercase",fontWeight:600,margin:"0 0 4px"}}>Receta extraída — revisa y confirma</p>
+                <p style={{fontFamily:FH,fontSize:18,color:G.text,margin:0,fontWeight:700}}>{preview.name}</p>
+                <p style={{fontFamily:FB,fontSize:11,color:G.textMid,margin:"2px 0 0"}}>{preview.category} · {preview.portions} porciones · {preview.steps?.length||0} pasos</p>
+              </div>
+              <div style={{padding:"12px 16px",maxHeight:180,overflowY:"auto"}}>
+                {(preview.steps||[]).map((s,i)=>(
+                  <div key={i} style={{marginBottom:8}}>
+                    <p style={{fontFamily:FH,fontSize:13,color:G.text,margin:"0 0 2px",fontWeight:700}}>{i+1}. {s.name}</p>
+                    <p style={{fontFamily:FB,fontSize:10,color:G.textMut,margin:0}}>{(s.ingredients||[]).map(x=>x.name).join(", ")}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={{padding:"12px 16px",borderTop:`1px solid ${G.brd}`,display:"flex",gap:8}}>
+                <button onClick={()=>onImport(preview)} style={bv("p",{padding:"9px 20px",borderRadius:6,flex:1})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>✓ Guardar en repositorio</button>
+                <button onClick={()=>setPreview(null)} style={bv("ghost",{padding:"9px 16px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>Descartar</button>
+              </div>
+            </div>
+          )}
+          {preview?._multi&&(
+            <div style={{marginTop:12,background:G.green+"0A",border:`1px solid ${G.green}33`,borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
+              <p style={{fontFamily:FH,fontSize:18,color:G.green,margin:"0 0 4px",fontWeight:700}}>✅ {preview._count} recetas importadas</p>
+              <p style={{fontFamily:FB,fontSize:12,color:G.textMid,margin:0}}>Todas guardadas en tu repositorio</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionBox({title,children}){
+  return(
+    <div style={{border:`1px solid ${G.brd}`,borderRadius:10,marginBottom:16,overflow:"hidden"}}>
+      <div style={{background:G.surf,borderBottom:`1px solid ${G.brd}`,padding:"11px 20px"}}>
+        <h3 style={{fontFamily:FH,fontSize:14,color:G.text,margin:0,fontWeight:700,letterSpacing:.2}}>{title}</h3>
+      </div>
+      <div style={{padding:"18px 20px",background:G.w}}>{children}</div>
+    </div>
+  );
+}
+function Label({t,req}){return <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:6,fontFamily:FB}}>{t}{req&&<span style={{color:G.red}}> *</span>}</p>;}
+function ErrMsg({msg}){return msg?<p style={{fontSize:10,color:G.red,marginTop:3,fontFamily:FB}}>{msg}</p>:null;}
+
+function AddRecipe({onSave,onCancel,colls,initialRecipe}){
+  const isEdit=!!initialRecipe;
+  const fileRef=useRef();
+  const[form,setForm]=useState(()=>isEdit
+    ?{...initialRecipe, steps:(initialRecipe.steps||[]).map(s=>({...s,id:s.id||gid(),ingredients:(s.ingredients||[]).map(i=>({...i,id:i.id||gid()}))}))}
+    :{name:"",category:CATEGORIES[0],portions:4,photo:null,cutlery:[],plating:"",steps:[eStep()],colls:[]});
+  const[errors,setErrors]=useState({});
+  const upd=(k,v)=>setForm(p=>({...p,[k]:v}));
+  const handlePhoto=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>upd("photo",ev.target.result);r.readAsDataURL(f);};
+  const toggleCut=id=>setForm(p=>({...p,cutlery:p.cutlery.includes(id)?p.cutlery.filter(c=>c!==id):[...p.cutlery,id]}));
+  const toggleColl=id=>setForm(p=>({...p,colls:p.colls.includes(id)?p.colls.filter(c=>c!==id):[...p.colls,id]}));
+  const addStep=()=>setForm(p=>({...p,steps:[...p.steps,eStep()]}));
+  const remStep=sid=>setForm(p=>({...p,steps:p.steps.filter(s=>s.id!==sid)}));
+  const updStep=(sid,k,v)=>setForm(p=>({...p,steps:p.steps.map(s=>s.id===sid?{...s,[k]:v}:s)}));
+  const addIng=sid=>setForm(p=>({...p,steps:p.steps.map(s=>s.id===sid?{...s,ingredients:[...s.ingredients,eIng()]}:s)}));
+  const remIng=(sid,iid)=>setForm(p=>({...p,steps:p.steps.map(s=>s.id===sid?{...s,ingredients:s.ingredients.filter(i=>i.id!==iid)}:s)}));
+  const updIng=(sid,iid,k,v)=>setForm(p=>({...p,steps:p.steps.map(s=>s.id===sid?{...s,ingredients:s.ingredients.map(i=>i.id===iid?{...i,[k]:v}:i)}:s)}));
+  const validate=()=>{const e={};if(!form.name.trim())e.name="Requerido";if(!form.portions||form.portions<1)e.por="Mínimo 1";form.steps.forEach((s,si)=>{if(!s.name.trim())e[`sn${si}`]="Requerido";s.ingredients.forEach((i,ii)=>{if(!i.name.trim())e[`in${si}_${ii}`]="Requerido";if(!i.quantity||parseFloat(i.quantity)<=0)e[`iq${si}_${ii}`]="Requerido";});});setErrors(e);return Object.keys(e).length===0;};
+  return(
+    <div style={{maxWidth:900,margin:"0 auto",padding:"40px 32px 80px"}}>
+      <p style={{fontFamily:FB,fontSize:10,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>{isEdit?"Editar Receta":"Nueva Receta"}</p>
+      <h2 style={{fontFamily:FH,fontSize:30,color:G.text,margin:"0 0 28px",fontWeight:700,letterSpacing:-.5}}>{isEdit?form.name:"Crear receta"}</h2>
+      <SectionBox title="Información General">
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+          <div style={{gridColumn:"1/-1"}}><Label t="Nombre" req/><input value={form.name} onChange={e=>upd("name",e.target.value)} style={inp()} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/><ErrMsg msg={errors.name}/></div>
+          <div><Label t="Categoría"/><select value={form.category} onChange={e=>upd("category",e.target.value)} style={inp({cursor:"pointer"})}>{CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></div>
+          <div><Label t="Porciones" req/><input type="number" min="1" value={form.portions} onChange={e=>upd("portions",parseInt(e.target.value)||1)} style={inp()}/><ErrMsg msg={errors.por}/></div>
+        </div>
+        <Label t="Cubiertos / Servicio"/>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
+          {CUTLERY.map(c=>{const s=form.cutlery.includes(c.id);return(
+            <button key={c.id} onClick={()=>toggleCut(c.id)} style={{background:s?G.blueTint:"transparent",color:s?G.blue:G.textMid,border:`1px solid ${s?G.blue:G.brd}`,padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:FB,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+              <span>{c.icon}</span>{c.label}
+            </button>);})}
+        </div>
+        <Label t="Emplatado"/>
+        <textarea value={form.plating} onChange={e=>upd("plating",e.target.value)} rows={3} placeholder="Orden de elementos, temperatura del plato, decoración final…" style={inp({resize:"vertical",lineHeight:1.6})}/>
+        {colls.length>0&&<><div style={{marginTop:14}}><Label t="Colecciones"/></div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{colls.map(c=>{const s=form.colls.includes(c.id);return(<button key={c.id} onClick={()=>toggleColl(c.id)} style={{background:s?c.color+"15":"transparent",border:`1px solid ${s?c.color:G.brd}`,color:s?c.color:G.textMut,padding:"4px 11px",borderRadius:20,cursor:"pointer",fontFamily:FB,fontSize:10,fontWeight:600}}>{c.name}</button>);})}</div></>}
+      </SectionBox>
+      <SectionBox title="Fotografía">
+        <input type="file" accept="image/*" ref={fileRef} onChange={handlePhoto} style={{display:"none"}}/>
+        {form.photo
+          ?<div style={{position:"relative",display:"inline-block"}}><img src={form.photo} alt="preview" style={{maxWidth:280,maxHeight:200,borderRadius:8,border:`1px solid ${G.brd}`,objectFit:"cover"}}/><button onClick={()=>upd("photo",null)} style={{...bv("ghost",{position:"absolute",top:8,right:8,padding:"3px 8px",fontSize:10,borderRadius:4})}}>✕</button></div>
+          :<button onClick={()=>fileRef.current.click()} style={{width:"100%",padding:"32px",border:`2px dashed ${G.brd}`,borderRadius:8,background:G.surf,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,color:G.textMut,transition:"border-color .18s",fontFamily:FB,fontSize:12}}
+            onMouseOver={e=>{e.currentTarget.style.borderColor=G.blue;e.currentTarget.style.color=G.blue;}} onMouseOut={e=>{e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.color=G.textMut;}}>
+            <span style={{fontSize:24}}>📷</span>Subir foto de la receta<span style={{fontSize:10}}>JPG, PNG, WEBP</span>
+          </button>}
+      </SectionBox>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <h3 style={{fontFamily:FH,fontSize:22,color:G.text,margin:0,fontWeight:700}}>Pasos de Elaboración</h3>
+        <button onClick={addStep} style={bv("p",{padding:"7px 14px",fontSize:11})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>+ Paso</button>
+      </div>
+      {form.steps.map((step,si)=>(
+        <div key={step.id} style={{border:`1px solid ${G.brd}`,borderRadius:10,marginBottom:12,overflow:"hidden"}}>
+          <div style={{background:G.surf,borderBottom:`1px solid ${G.brd}`,padding:"10px 18px",display:"flex",alignItems:"center",gap:10}}>
+            <span style={{background:G.blue,color:G.w,width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,flexShrink:0,fontFamily:FH}}>{si+1}</span>
+            <input value={step.name} onChange={e=>updStep(step.id,"name",e.target.value)} placeholder={`Nombre del paso ${si+1}`} style={{...inp({flex:1,background:"transparent",border:"none",fontFamily:FH,fontWeight:700,fontSize:13,padding:"2px 0"})}}/>
+            {errors[`sn${si}`]&&<span style={{fontSize:10,color:G.red}}>{errors[`sn${si}`]}</span>}
+            {form.steps.length>1&&<button onClick={()=>remStep(step.id)} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontSize:14}}>✕</button>}
+          </div>
+          <div style={{padding:"16px 18px",background:G.w}}>
+            <table style={{width:"100%",borderCollapse:"collapse",marginBottom:8}}>
+              <thead><tr style={{borderBottom:`1px solid ${G.brd}`}}>{["Ingrediente","Cantidad","Unidad","Rend. %",""].map((h,hi)=><th key={hi} style={{textAlign:"left",padding:"4px 6px",fontSize:9,color:G.textMut,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",fontFamily:FB}}>{h}</th>)}</tr></thead>
+              <tbody>{step.ingredients.map((ing,ii)=>(
+                <tr key={ing.id} style={{borderBottom:`1px solid ${G.brd}`}}>
+                  <td style={{padding:"4px 6px",minWidth:140}}><input value={ing.name} onChange={e=>updIng(step.id,ing.id,"name",e.target.value)} placeholder="Ingrediente" style={inp({padding:"5px 8px"})}/><ErrMsg msg={errors[`in${si}_${ii}`]}/></td>
+                  <td style={{padding:"4px 6px",width:80}}><input type="number" min="0" value={ing.quantity} onChange={e=>updIng(step.id,ing.id,"quantity",e.target.value)} placeholder="0" style={inp({padding:"5px 8px",textAlign:"right"})}/><ErrMsg msg={errors[`iq${si}_${ii}`]}/></td>
+                  <td style={{padding:"4px 6px",width:80}}><select value={ing.unit} onChange={e=>updIng(step.id,ing.id,"unit",e.target.value)} style={inp({padding:"5px 8px",cursor:"pointer"})}>{UNITS.map(u=><option key={u}>{u}</option>)}</select></td>
+                  <td style={{padding:"4px 6px",width:100}}><div style={{display:"flex",alignItems:"center",gap:4}}><input type="number" min="1" max="100" value={ing.yieldPct} onChange={e=>updIng(step.id,ing.id,"yieldPct",parseFloat(e.target.value)||100)} style={inp({padding:"5px 8px",textAlign:"right",width:58})}/><span style={{color:G.textMut,fontSize:10,fontFamily:FB}}>%</span></div></td>
+                  <td style={{padding:"4px 6px",width:26}}>{step.ingredients.length>1&&<button onClick={()=>remIng(step.id,ing.id)} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontSize:13}}>✕</button>}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+            <button onClick={()=>addIng(step.id)} style={bv("soft",{fontSize:10,padding:"4px 10px",borderRadius:6})}>+ Ingrediente</button>
+            <div style={{marginTop:14}}><Label t="Metodología"/>
+              <textarea value={step.method} onChange={e=>updStep(step.id,"method",e.target.value)} rows={3} placeholder="Procedimiento y técnica…" style={inp({resize:"vertical",lineHeight:1.7})}/>
+            </div>
+          </div>
+        </div>
+      ))}
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:24,paddingTop:20,borderTop:`1px solid ${G.brd}`}}>
+        <button onClick={onCancel} style={bv("ghost")} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>Cancelar</button>
+        <button onClick={()=>{if(validate())onSave(isEdit?{...form,id:initialRecipe.id}:form);}} style={bv("p")} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>{isEdit?"Guardar Cambios":"Guardar Receta"}</button>
+      </div>
+    </div>
+  );
+}
+
+/* ══ ORGANIZE ══ */
+function Organize({recipes,colls,setColls,onOpen}){
+  const[newName,setNewName]=useState("");
+  const[newCol,setNewCol]=useState(COLL_COLORS[0]);
+  const addColl=()=>{if(!newName.trim())return;setColls(p=>[...p,{id:gid(),name:newName.trim(),color:newCol}]);setNewName("");};
+  const delColl=id=>setColls(p=>p.filter(c=>c.id!==id));
+  const uncollected=recipes.filter(r=>!r.colls||r.colls.length===0);
+  return(
+    <div style={{maxWidth:1100,margin:"0 auto",padding:"48px 32px"}}>
+      <p style={{fontFamily:FB,fontSize:10,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Organización</p>
+      <h1 style={{fontFamily:FH,fontSize:38,color:G.text,margin:"0 0 4px",fontWeight:700,letterSpacing:-.5}}>Colecciones</h1>
+      <p style={{color:G.textMut,fontSize:13,margin:"0 0 32px",fontFamily:FB}}>Organiza tus recetas en carpetas temáticas. Asígnalas desde la vista de detalle de cada receta.</p>
+      <div style={{border:`1px solid ${G.brd}`,borderRadius:10,padding:"20px",marginBottom:28,display:"flex",gap:14,alignItems:"flex-end",flexWrap:"wrap",background:G.surf}}>
+        <div style={{flex:1,minWidth:160}}><Label t="Nueva Colección"/><input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addColl()} placeholder="Nombre de la colección…" style={inp()}/></div>
+        <div><Label t="Color"/><div style={{display:"flex",gap:6}}>{COLL_COLORS.map(c=><button key={c} onClick={()=>setNewCol(c)} style={{width:24,height:24,borderRadius:"50%",background:c,border:newCol===c?`3px solid ${G.text}`:`2px solid transparent`,cursor:"pointer"}}/>)}</div></div>
+        <button onClick={addColl} style={bv("p",{padding:"9px 18px"})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>Crear</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:18,marginBottom:28}}>
+        {colls.map(coll=>{const cr=recipes.filter(r=>r.colls?.includes(coll.id));return(
+          <div key={coll.id} style={{border:`1px solid ${G.brd}`,borderRadius:10,overflow:"hidden",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+            <div style={{background:coll.color+"10",borderBottom:`1px solid ${coll.color}30`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:10,height:10,borderRadius:"50%",background:coll.color,flexShrink:0}}/>
+              <span style={{fontFamily:FH,fontSize:17,color:G.text,flex:1,fontWeight:700}}>{coll.name}</span>
+              <span style={{fontSize:10,color:G.textMut,fontFamily:FB}}>{cr.length} receta{cr.length!==1?"s":""}</span>
+              <button onClick={()=>delColl(coll.id)} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontSize:13}}>✕</button>
+            </div>
+            <div style={{padding:"12px 18px",display:"flex",flexDirection:"column",gap:4,minHeight:56}}>
+              {cr.length===0&&<p style={{color:G.textMut,fontSize:11,margin:0,fontStyle:"italic",fontFamily:FB}}>Sin recetas asignadas</p>}
+              {cr.map(r=><button key={r.id} onClick={()=>onOpen(r.id)} style={{background:"none",border:"none",textAlign:"left",cursor:"pointer",padding:"5px 0",color:G.textMid,fontFamily:FB,fontSize:11,borderBottom:`1px solid ${G.brd}`,display:"flex",justifyContent:"space-between"}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=G.textMid}><span>{r.name}</span><span style={{fontSize:9,color:G.textMut}}>{r.category}</span></button>)}
+            </div>
+          </div>
+        );})}
+      </div>
+      {uncollected.length>0&&(
+        <div style={{border:`1px solid ${G.brd}`,borderRadius:10,overflow:"hidden",background:G.w}}>
+          <div style={{background:G.surf,borderBottom:`1px solid ${G.brd}`,padding:"12px 18px"}}><span style={{fontFamily:FH,fontSize:15,color:G.text,fontWeight:700}}>Sin clasificar — {uncollected.length}</span></div>
+          <div style={{padding:"12px 18px",display:"flex",flexDirection:"column",gap:4}}>
+            {uncollected.map(r=><button key={r.id} onClick={()=>onOpen(r.id)} style={{background:"none",border:"none",textAlign:"left",cursor:"pointer",padding:"5px 0",color:G.textMid,fontFamily:FB,fontSize:11,borderBottom:`1px solid ${G.brd}`,display:"flex",justifyContent:"space-between"}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=G.textMid}><span>{r.name}</span><span style={{fontSize:9,color:G.textMut}}>{r.category}</span></button>)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   RECIPE SOURCES — 20 top sources
+══════════════════════════════════════════ */
+const RECIPE_SOURCES=[
+  {id:"nyt",     name:"NYT Cooking",            domain:"cooking.nytimes.com"},
+  {id:"serious", name:"Serious Eats",            domain:"seriouseats.com"},
+  {id:"epicur",  name:"Epicurious",              domain:"epicurious.com"},
+  {id:"bonapp",  name:"Bon Appétit",             domain:"bonappetit.com"},
+  {id:"fn",      name:"Food Network",            domain:"foodnetwork.com"},
+  {id:"food52",  name:"Food52",                  domain:"food52.com"},
+  {id:"allrec",  name:"AllRecipes",              domain:"allrecipes.com"},
+  {id:"simple",  name:"Simply Recipes",          domain:"simplyrecipes.com"},
+  {id:"smitkit", name:"Smitten Kitchen",         domain:"smittenkitchen.com"},
+  {id:"minbak",  name:"Minimalist Baker",        domain:"minimalistbaker.com"},
+  {id:"jamie",   name:"Jamie Oliver",            domain:"jamieoliver.com"},
+  {id:"bbc",     name:"BBC Good Food",           domain:"bbcgoodfood.com"},
+  {id:"nestle",  name:"Nestlé Recipes",          domain:"nestle.com/recipes"},
+  {id:"martha",  name:"Martha Stewart",          domain:"marthastewart.com"},
+  {id:"tasty",   name:"Tasty",                   domain:"tasty.co"},
+  {id:"delish",  name:"Delish",                  domain:"delish.com"},
+  {id:"kitchn",  name:"The Kitchn",              domain:"thekitchn.com"},
+  {id:"atk",     name:"America's Test Kitchen",  domain:"americastestkitchen.com"},
+  {id:"chefstep",name:"ChefSteps",               domain:"chefsteps.com"},
+  {id:"taste",   name:"Taste of Home",           domain:"tasteofhome.com"},
+];
+
+/* ══════════════════════════════════════════
+   FLAVOR LAB — redesigned
+══════════════════════════════════════════ */
+/* ══ EXTENDED INGREDIENT DATABASE ══ */
+const ING_EXTENDED={
+  tostados:["Café espresso","Café filtrado","Café de olla","Cold brew","Cacao 70%","Cacao 85%","Cacao en polvo","Cacao nibs","Haba de cacao","Avellana tostada","Almendra tostada","Cacahuete","Nuez tostada","Piñón tostado","Sésamo negro tostado","Malta oscura","Malta clara","Pan brioche","Pan de centeno","Caramelo oscuro","Toffee","Tahini","Mantequilla de maní","Garrapiñada","Miso oscuro"],
+  carneos:["Ternera wagyu","Cordero lechal","Pato magret","Pollo de campo","Cerdo ibérico","Foie gras","Conejo","Codorniz","Venado","Jabalí","Buey madurado","Mollejas","Tuétano","Carrillera de cerdo","Rabo de toro","Pato confit","Pechuga de oca","Codillo","Secreto ibérico","Panceta curada","Chuletón","Costillas BBQ","Lomo alto","Solomillo","Ossobuco"],
+  curados:["Jamón ibérico","Jamón serrano","Bresaola","Lomo curado","Chorizo","Salchichón","Fuet","Guanciale","Prosciutto di Parma","Speck","Panceta curada","Sobrasada","Morcilla","Anchoa del Cantábrico","Boquerón","Sardina en aceite","Caballa en aceite","Bonito del norte","Atún rojo en aceite","Bottarga","Katsuobushi","Miso shiro","Miso aka","Garum","Colatura di alici"],
+  lacteos:["Parmesano Reggiano","Pecorino Romano","Queso azul Roquefort","Gorgonzola","Stilton","Queso de cabra fresco","Burrata","Stracciatella","Mozzarella di bufala","Brie","Camembert","Manchego curado","Comté","Gruyère","Beaufort","Ricotta","Mascarpone","Crème fraîche","Mantequilla noisette","Mantequilla de Normandía","Ghee","Kéfir","Yogur griego","Labneh","Requesón"],
+  terrosos:["Trufa negra Périgord","Trufa blanca Alba","Trufa de verano","Porcini frescos","Shiitake","Matsutake","Trompeta de la muerte","Maitake","Oreja de Judas","Seta de cardo","Níscalo","Remolacha roja","Remolacha dorada","Zanahoria morada","Zanahoria negra","Chirivía","Apio-nabo","Topinambur","Patata violeta","Ñame","Raíz de bardana","Tierra de jardín comestible","Ganoderma","Melena de león","Polvo de tierra"],
+  amostazados:["Mostaza Dijon","Mostaza de Meaux","Mostaza inglesa","Mostaza silvestre","Wasabi fresco","Rábano picante","Daikon","Rábano negro","Alcaparra","Alcaparrones","Berro","Rúcula silvestre","Cress","Natto","Chucrut","Kimchi","Pepinillo encurtido","Miso de cebada","Vinagre de umeboshi","Pepino agridulce","Raíz de wasabi","Tupinambo encurtido","Mostaza en grano","Mostaza negra","Col fermentada"],
+  sulfurosos:["Ajo negro","Ajo blanco","Ajo asado","Ajo de oso","Cebolla roja","Cebolla blanca","Cebolla caramelizada","Puerro","Chalota","Cebollín","Cebolleta","Coliflor","Brócoli","Col rizada","Col lombarda","Col napa","Bok choy","Nabo blanco","Rábano negro","Coles de Bruselas","Romanesco","Kohlrabi","Kimchi","Cebolla quemada","Carbón vegetal alimentario"],
+  marinos:["Ostra Gillardeau","Ostra Belon","Ostra fina","Caviar beluga","Caviar sevruga","Caviar osetra","Caviar de esturión siberiano","Alga nori","Alga wakame","Alga kombu","Alga espagueti de mar","Alga agar","Vieiras de Bretaña","Mejillón","Almeja","Berberecho","Oreja de mar","Erizo de mar","Percebe","Langosta","Bogavante","Centollo","Txangurro","Carabinero","Gamba roja"],
+  salados:["Aceituna Kalamata","Aceituna Gordal","Aceituna negra curada","Aceituna verde","Pepinillo kosher","Alcaparra","Sardina en aceite","Anchoa del Cantábrico","Boquerón en vinagre","Jamón curado","Queso feta","Ricotta salata","Halloumi","Salsa de soja oscura","Salsa de soja clara","Miso blanco","Nam pla","Nuoc mam","Garum de cerdo","Colatura di alici","Umeboshi","Kombu dashi","Salsa Worcestershire","Pasta de anchoa","Mojama"],
+  herbaceos:["Cilantro fresco","Albahaca genovesa","Albahaca tailandesa","Albahaca morada","Perejil liso","Perejil rizado","Eneldo","Cebollino","Cebollín","Perifollo","Estragón","Hierbabuena","Menta spearmint","Menta piperita","Hoja de curry","Hierba limón","Pandan","Shiso verde","Shiso morado","Hojas de lima kaffir","Borraja","Acedera","Ortiga","Hoja de higuera","Verbena fresca"],
+  resinosos:["Romero fresco","Tomillo fresco","Tomillo limonero","Laurel","Enebro","Mirto","Lavanda culinaria","Salvia","Salvia moscada","Hisopo","Ajedrea","Mejorana","Orégano fresco","Orégano seco","Pino piñonero","Abeto","Resina de pino","Té de bosque","Eucalipto","Cedro","Ciprés","Palo santo","Canela de hoja","Ramita de abeto","Hierba de San Juan"],
+  anisados:["Hinojo fresco","Bulbo de hinojo","Semilla de hinojo","Anís verde","Anís estrellado","Estragón fresco","Perifollo","Regaliz","Raíz de regaliz","Pastis","Ouzo","Sambuca","Absinthe","Pernod","Aquavit","Genièvre","Coriandro tostado","Cardamomo verde","Hierbas de Provenza","Tomillo anisado","Dill seed","Hierba santa","Hoja de aguacate seca","Té de anís","Fenouil de mer"],
+  calidaEsp:["Canela de Ceilán","Canela cassia","Cardamomo verde","Cardamomo negro","Vainilla Bourbon","Vainilla Tahití","Clavo de olor","Nuez moscada","Macis","Pimienta de Jamaica","Pimienta rosa","Pimienta de Sichuan","Jengibre seco","Galangal","Cúrcuma","Zumaque","Tonka","Amchoor","Azafrán","Curry suave","Garam masala","Ras el hanout","Baharat","Berbere","Chaat masala"],
+  citricos:["Limón sutil","Limón amarillo","Lima persa","Lima key","Lima kaffir","Naranja de Valencia","Naranja sanguina","Pomelo blanco","Pomelo rojo","Yuzu","Bergamota","Kumquat","Limequat","Citrus Sudachi","Kabosu","Combava","Cidra","Yuzu kosho","Citrus caviar","Verbena limón","Hierba limón","Zest de bergamota","Verjuice","Agua de azahar","Limón confitado"],
+  florales:["Rosa de mayo","Pétalos de rosa comestibles","Agua de rosas","Lavanda culinaria","Azahar","Flor de saúco","Flor de naranjo","Violeta","Jazmín","Hibisco","Capuchina","Flor de borraja","Crisantemo comestible","Geranio aromático","Madreselva","Glicinia","Flor de acacia","Flor de guisante","Flor de albahaca","Flor de romero","Flor de tomillo","Magnolia comestible","Flor de saúco seca","Agua de flor de naranjo","Ylang ylang"],
+  bayas:["Frambuesa roja","Frambuesa amarilla","Fresa","Fresa silvestre","Cereza Griotte","Cereza dulce","Arándano cultivado","Arándano silvestre","Arándano rojo (cranberry)","Grosella roja","Grosella negra (cassis)","Mora","Mora silvestre","Saúco (baya)","Endrino (sloe)","Rosa mosqueta","Lingonberry","Boysenberry","Loganberry","Baya de goji","Baya de acaí","Physalis","Maracuyá rojo","Tamarillo","Marañón"],
+  tropicales:["Mango ataulfo","Mango Kent","Maracuyá amarillo","Maracuyá morado","Coco tierno","Coco maduro","Piña Gold","Papaya","Guayaba","Lychee","Rambután","Mangostán","Carambola","Pitahaya roja","Pitahaya amarilla","Tamarindo","Mamey sapote","Chirimoya","Guanábana","Plátano macho","Jackfruit","Longan","Noni","Cupuaçu","Açaí"],
+  afrutados:["Manzana Granny Smith","Manzana Golden","Manzana Fuji","Pera Williams","Pera Conferencia","Pera Rocha","Uva moscatel","Uva Tokaji","Uva Riesling","Membrillo","Higo negro","Higo verde","Higo seco","Ciruela mirabelle","Ciruelo japonés (ume)","Melocotón","Nectarina","Albaricoque","Caqui","Melón cantalupo","Melón piel de sapo","Sandía","Kiwi","Feijoa","Manzana asada"],
+  spirits:["Whisky single malt Islay","Whisky single malt Speyside","Bourbon Kentucky","Whisky de centeno (rye)","Ron añejo 12 años","Ron agrícole blanc","Ron oscuro jamaicano","Gin London dry","Gin floral (Hendrick's style)","Mezcal reposado","Mezcal espadín","Mezcal tobalá","Tequila blanco","Tequila añejo","Cognac VSOP","Cognac XO","Armagnac","Calvados","Pisco puro","Grappa","Singani","Cachaza","Sotol","Baijiu","Sake junmai daiginjo"],
+  bar:["Champán Brut","Champán Blanc de Blancs","Champán Rosado","Cava Brut Nature","Prosecco","Crémant d'Alsace","Campari","Aperol","Vermouth rojo","Vermouth blanco seco","Noilly Prat","Lillet Blanc","Cocchi Americano","Jerez Fino","Jerez Manzanilla","Jerez Oloroso","Pedro Ximénez","Oporto Ruby","Oporto Tawny","Madera","Angostura bitters","Peychaud's bitters","Chartreuse verde","Chartreuse amarilla","Fernet-Branca"],
+};
+
+function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
+  const[labTab,setLabTab]=useState("wheel"); // wheel | need
+  const[selected,setSelected]=useState([]);
+  const[hoverIng,setHoverIng]=useState(null);
+  const[activePair,setActivePair]=useState(null);
+  const[concept,setConcept]=useState(null);
+  const[loading,setLoading]=useState(false);
+  const[mode,setMode]=useState("cocina");
+  const[activeCat,setActiveCat]=useState(null);
+  const[catSearch,setCatSearch]=useState("");
+  const[customIngs,setCustomIngs]=useState({});
+
+  const addCustomIng=(sectorId,name)=>{
+    const n=name.trim(); if(!n)return;
+    setCustomIngs(p=>({...p,[sectorId]:[...(p[sectorId]||[]),n]}));
+    setSelected(p=>p.includes(n)?p:p.length<8?[...p,n]:p);
+  };
+  // Zoom & pan
+  const[zoom,setZoom]=useState(1);
+  const[pan,setPan]=useState({x:0,y:0});
+  const dragRef=useRef({active:false,startX:0,startY:0,startPanX:0,startPanY:0});
+  // Recipe builder — 3 modes: free | repo | web
+  const[builderMode,setBuilderMode]=useState("free");
+  const[freeInput,setFreeInput]=useState("");
+  const[freeList,setFreeList]=useState([]);
+  const[selRecipeId,setSelRecipeId]=useState("");
+  // Web search
+  const[webQuery,setWebQuery]=useState("");
+  const[selSources,setSelSources]=useState(["nyt","serious","epicur","bonapp","nestle"]);
+  const[webResults,setWebResults]=useState([]);
+  const[webLoading,setWebLoading]=useState(false);
+  const[webError,setWebError]=useState("");
+  const[showSources,setShowSources]=useState(false);
+  // Ingredients from web result
+  const[webIngList,setWebIngList]=useState([]);
+
+  const toggle=name=>{setSelected(p=>p.includes(name)?p.filter(x=>x!==name):p.length<8?[...p,name]:p);setActivePair(null);};
+  const BAR_IDS=["spirits","bar"];
+  const knownPairs=[];
+  for(let i=0;i<selected.length;i++)for(let j=i+1;j<selected.length;j++){const aff=getAff(selected[i],selected[j]);if(aff)knownPairs.push({a:selected[i],b:selected[j],aff});}
+
+  // Zoom/pan handlers
+  const onWheel=e=>{e.preventDefault();const d=e.deltaY>0?0.85:1.15;setZoom(z=>Math.min(4,Math.max(0.4,z*d)));};
+  const onMouseDown=e=>{dragRef.current={active:true,startX:e.clientX,startY:e.clientY,startPanX:pan.x,startPanY:pan.y};};
+  const onMouseMove=e=>{if(!dragRef.current.active)return;setPan({x:dragRef.current.startPanX+e.clientX-dragRef.current.startX,y:dragRef.current.startPanY+e.clientY-dragRef.current.startY});};
+  const onMouseUp=()=>{dragRef.current.active=false;};
+  const resetView=()=>{setZoom(1);setPan({x:0,y:0});};
+
+  // Free ingredients
+  const addFreeIng=()=>{if(!freeInput.trim())return;setFreeList(p=>[...p,freeInput.trim()]);setFreeInput("");};
+
+  // Repo ingredients
+  const selRecipe=recipes.find(r=>r.id===selRecipeId);
+  const recipeIngs=selRecipe?aggIng(selRecipe).map(i=>i.name):[];
+
+  // Toggle source
+  const toggleSource=id=>setSelSources(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+
+  // Web recipe search
+  const searchWeb=async()=>{
+    if(!webQuery.trim())return;
+    setWebLoading(true);setWebResults([]);setWebError("");
+    const active=RECIPE_SOURCES.filter(s=>selSources.includes(s.id));
+    const srcStr=active.length>0
+      ?`Busca prioritariamente en: ${active.map(s=>`${s.name} (${s.domain})`).join(", ")}.`
+      :"Busca en las mejores fuentes gastronómicas del mundo.";
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST", headers:AHEADERS(),
+        body:JSON.stringify({
+          model:"claude-sonnet-4-6",max_tokens:2000,
+          tools:[{type:"web_search_20250305",name:"web_search"}],
+          system:`Eres un buscador experto de recetas gastronómicas. ${srcStr} Cuando encuentres recetas, devuelve ÚNICAMENTE un array JSON válido con este formato exacto sin texto adicional: [{"name":"nombre de la receta","source":"nombre de la fuente","url":"URL completa y válida","ingredients":["ingrediente 1","ingrediente 2","ingrediente 3","ingrediente 4","ingrediente 5"],"description":"descripción breve del plato en 1 frase"}]. Máximo 5 resultados. Responde SOLO con el JSON, sin explicaciones.`,
+          messages:[{role:"user",content:`Busca recetas de: "${webQuery}"`}]
+        })
+      });
+      const data=await res.json();
+      const texts=(data.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
+      const m=texts.match(/\[[\s\S]*?\]/);
+      if(m){
+        const parsed=JSON.parse(m[0]);
+        setWebResults(parsed);
+      } else {
+        setWebError("No se encontraron resultados. Prueba con otro término.");
+      }
+    }catch(e){setWebError("Error de búsqueda. Verifica tu conexión a internet.");}
+    setWebLoading(false);
+  };
+
+  // Current builder ingredients
+  const builderIngs = builderMode==="free" ? freeList
+    : builderMode==="repo" ? recipeIngs
+    : webIngList;
+
+  // All ingredients for spark
+  const allIngsForSpark=[...new Set([...selected,...builderIngs])];
+
+  const generateConcept=async()=>{
+    if(allIngsForSpark.length<2)return;
+    setLoading(true);setConcept(null);
+    const ctx=allIngsForSpark.map(name=>{const s=SECTORS.find(sec=>sec.ings.includes(name));return`${name}${s?` (familia: ${s.name})`:""}`;});
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:AHEADERS(),body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,system:"Eres el asistente creativo de un chef de nivel mundial. Dominas Niki Segnit y François Chartier. Respondes SIEMPRE con JSON válido puro, sin texto extra, sin backticks. Sé conciso.",messages:[{role:"user",content:`Ingredientes: ${ctx.join(", ")}\n\nGenera 3 conceptos de alta cocina o coctelería. Responde SOLO con JSON válido (máximo 120 palabras por campo):\n[\n  {\n    "nombre": "Nombre poético",\n    "descripcion": "Una frase de la esencia",\n    "logica": "Lógica aromática molecular estilo Chartier (conciso)",\n    "tecnica": "Técnica y emplatado (conciso)"\n  }\n]`}]})});
+      const data=await res.json();
+      if(!res.ok){ setConcept(`Error ${res.status}: ${data?.error?.message||JSON.stringify(data)}`); setLoading(false); return; }
+      const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
+      // Extract JSON array, repair if truncated
+      const parseJson=str=>{
+        const m=str.match(/\[[\s\S]*\]/);
+        if(m)try{return JSON.parse(m[0]);}catch(e){}
+        // Repair truncated JSON: find last complete object
+        const lastClose=str.lastIndexOf('"}');
+        if(lastClose>0){try{return JSON.parse(str.slice(0,lastClose+2)+"]");}catch(e){}}
+        return null;
+      };
+      const parsed=parseJson(raw);
+      setConcept(parsed||raw||"Respuesta vacía — intenta de nuevo.");
+    }catch(e){setConcept(`Error de red: ${e.message}`);}
+    setLoading(false);
+  };
+
+  const affCol=t=>t==="c"?G.gold:t==="m"?G.blue:"#7C3AED";
+  const affLabel=t=>t==="c"?"Clásico":t==="m"?"Molecular":"Sorprendente";
+
+  return(
+    <div style={{maxWidth:1400,margin:"0 auto",padding:"40px 32px 60px"}}>
+      {/* Header + Tab switcher */}
+      <div style={{marginBottom:28}}>
+        <p style={{fontFamily:FB,fontSize:10,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Laboratorio de Sabores</p>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:14}}>
+          <h1 style={{fontFamily:FH,fontSize:34,color:G.text,margin:0,fontWeight:700,letterSpacing:-.5}}>
+            {labTab==="wheel"?"Rueda Aromática":"Desde la Necesidad"}
+          </h1>
+          {/* Main tabs */}
+          <div style={{display:"flex",gap:0,background:G.surf,borderRadius:8,padding:3}}>
+            {[["wheel","🎯 Rueda Aromática"],["need","💡 Desde la Necesidad"]].map(([id,label])=>(
+              <button key={id} onClick={()=>setLabTab(id)} style={{padding:"8px 16px",border:"none",borderRadius:6,background:labTab===id?G.w:"transparent",color:labTab===id?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:labTab===id?700:400,boxShadow:labTab===id?"0 1px 4px rgba(0,0,0,.08)":"none",transition:"all .15s"}}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── PESTAÑA: DESDE LA NECESIDAD ── */}
+      {labTab==="need"&&<NecesidadLab onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>}
+
+      {/* ── PESTAÑA: RUEDA AROMÁTICA ── */}
+      {labTab==="wheel"&&<>
+      {/* Legend */}
+      <div style={{display:"flex",gap:20,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+        {[["c",G.gold,"Clásico"],["m",G.blue,"Molecular"],["s","#7C3AED","Sorprendente"]].map(([t,col,label])=>(
+          <div key={t} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:G.textMid,fontFamily:FB}}>
+            <div style={{width:20,height:2.5,background:col,borderRadius:2}}/>
+            <span>{label}</span>
+          </div>
+        ))}
+        {selected.length>0&&<span style={{marginLeft:"auto",fontSize:11,color:G.textMut,fontFamily:FB}}>{selected.length} seleccionado{selected.length!==1?"s":""} · {knownPairs.length} afinidad{knownPairs.length!==1?"es":""}</span>}
+      </div>
+      {/* Mode buttons */}
+      <div style={{display:"flex",gap:6,marginBottom:20}}>
+        {[["cocina","Cocina"],["bar","Bar"],["todo","Cocina + Bar"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setMode(id)} style={{...bv("ghost",{padding:"7px 14px",fontSize:11,borderRadius:6}),background:mode===id?G.blue:"transparent",color:mode===id?G.w:G.textMid,borderColor:mode===id?G.blue:G.brd}}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24,alignItems:"start"}}>
+
+        {/* LEFT — Wheel with zoom */}
+        <div style={{border:`1px solid ${G.brd}`,borderRadius:12,overflow:"hidden",background:G.w,boxShadow:"0 2px 12px rgba(0,0,0,.04)"}}>
+          {/* Zoom controls */}
+          <div style={{padding:"10px 16px",borderBottom:`1px solid ${G.brd}`,display:"flex",alignItems:"center",gap:8,background:G.surf}}>
+            <span style={{fontFamily:FB,fontSize:10,color:G.textMut,letterSpacing:1,textTransform:"uppercase",fontWeight:600,flex:1}}>Clic para seleccionar · Arrastra · Rueda = zoom</span>
+            <div style={{display:"flex",gap:4}}>
+              {[["−",()=>setZoom(z=>Math.max(0.4,z*0.8))],["⊙",resetView],["+",()=>setZoom(z=>Math.min(4,z*1.25))]].map(([label,fn])=>(
+                <button key={label} onClick={fn} style={{width:28,height:28,border:`1px solid ${G.brd}`,borderRadius:6,background:G.w,cursor:"pointer",fontFamily:FB,fontSize:12,color:G.textMid,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}
+                  onMouseOver={e=>{e.currentTarget.style.borderColor=G.blue;e.currentTarget.style.color=G.blue;}} onMouseOut={e=>{e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.color=G.textMid;}}>
+                  {label}
+                </button>
+              ))}
+              <span style={{fontSize:10,color:G.textMut,alignSelf:"center",minWidth:36,textAlign:"center",fontFamily:FB}}>{Math.round(zoom*100)}%</span>
+            </div>
+          </div>
+          {/* Wheel container */}
+          <div style={{overflow:"hidden",cursor:dragRef.current.active?"grabbing":"grab",display:"flex",alignItems:"center",justifyContent:"center",background:G.w,userSelect:"none"}}
+            onWheel={onWheel} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
+            <div style={{transform:`scale(${zoom}) translate(${pan.x/zoom}px,${pan.y/zoom}px)`,transformOrigin:"center center",transition:dragRef.current.active?"none":"transform .1s",width:"100%"}}>
+              <FlavorWheel sectors={SECTORS} selected={selected} hoverIng={hoverIng} onToggle={toggle} onHover={setHoverIng} mode={mode} onCatClick={id=>{setActiveCat(id);setCatSearch("");}} />
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT panel */}
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          {activeCat ? (
+            <CategoryBrowser
+              cat={SECTORS.find(s=>s.id===activeCat)}
+              extended={[...(ING_EXTENDED[activeCat]||[]),...(customIngs[activeCat]||[])]}
+              custom={customIngs[activeCat]||[]}
+              selected={selected}
+              onToggle={toggle}
+              onClose={()=>setActiveCat(null)}
+              search={catSearch}
+              setSearch={setCatSearch}
+              onAddCustom={name=>addCustomIng(activeCat,name)}
+            />
+          ) : (<>
+
+          {/* Recipe Builder */}
+          <div style={{border:`1px solid ${G.brd}`,borderRadius:12,overflow:"hidden",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+            <div style={{padding:"14px 18px",borderBottom:`1px solid ${G.brd}`,background:G.surf}}>
+              <p style={{fontFamily:FH,fontSize:16,color:G.text,margin:"0 0 2px",fontWeight:700}}>Constructor de Receta</p>
+              <p style={{fontFamily:FB,fontSize:10,color:G.textMut,margin:0}}>Libre · Mi Repositorio · Búsqueda Web</p>
+            </div>
+            <div style={{padding:"14px 18px"}}>
+              {/* Mode tabs */}
+              <div style={{display:"flex",gap:4,marginBottom:14,background:G.surf,padding:3,borderRadius:8}}>
+                {[["free","Libre"],["repo","Repositorio"],["web","Buscar en Web"]].map(([id,label])=>(
+                  <button key={id} onClick={()=>setBuilderMode(id)} style={{flex:1,padding:"6px 8px",border:"none",borderRadius:6,background:builderMode===id?G.w:"transparent",color:builderMode===id?G.blue:G.textMut,cursor:"pointer",fontFamily:FB,fontSize:11,fontWeight:builderMode===id?700:400,boxShadow:builderMode===id?"0 1px 4px rgba(0,0,0,.08)":"none",transition:"all .15s"}}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* FREE */}
+              {builderMode==="free"&&(
+                <div>
+                  <div style={{display:"flex",gap:6,marginBottom:10}}>
+                    <input value={freeInput} onChange={e=>setFreeInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addFreeIng()} placeholder="Escribe un ingrediente y pulsa Enter…" style={inp({flex:1,padding:"7px 11px",fontSize:12})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                    <button onClick={addFreeIng} style={bv("p",{padding:"7px 12px",fontSize:13,borderRadius:6,fontWeight:700})}>+</button>
+                  </div>
+                  {freeList.length>0
+                    ?<div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {freeList.map(n=><span key={n} style={{background:G.blueTint,border:`1px solid ${G.blue}30`,color:G.blue,padding:"3px 10px",borderRadius:20,fontSize:11,fontFamily:FB,display:"flex",alignItems:"center",gap:5}}>
+                          {n}<button onClick={()=>setFreeList(p=>p.filter(x=>x!==n))} style={{background:"none",border:"none",color:G.blue,cursor:"pointer",fontSize:12,padding:0,lineHeight:1}}>×</button>
+                        </span>)}
+                      </div>
+                    :<p style={{color:G.textMut,fontSize:11,fontFamily:FB,fontStyle:"italic"}}>Escribe ingredientes y pulsa Enter para añadir</p>}
+                </div>
+              )}
+
+              {/* REPO */}
+              {builderMode==="repo"&&(
+                <div>
+                  <select value={selRecipeId} onChange={e=>setSelRecipeId(e.target.value)} style={inp({marginBottom:10,cursor:"pointer",fontSize:12})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}>
+                    <option value="">Seleccionar receta del repositorio…</option>
+                    {recipes.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                  {recipeIngs.length>0
+                    ?<div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {recipeIngs.map(n=><span key={n} style={{background:G.surf,border:`1px solid ${G.brd}`,color:G.textMid,padding:"3px 9px",borderRadius:20,fontSize:10,fontFamily:FB}}>{n}</span>)}
+                      </div>
+                    :<p style={{color:G.textMut,fontSize:11,fontFamily:FB,fontStyle:"italic"}}>{selRecipeId?"Sin ingredientes":"Elige una receta para cargar sus ingredientes"}</p>}
+                </div>
+              )}
+
+              {/* WEB SEARCH */}
+              {builderMode==="web"&&(
+                <div>
+                  {/* Source selector */}
+                  <div style={{marginBottom:12}}>
+                    <button onClick={()=>setShowSources(p=>!p)} style={{...bv("ghost",{fontSize:11,padding:"5px 12px",borderRadius:6,width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center"})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
+                      <span>{selSources.length} fuente{selSources.length!==1?"s":""}  seleccionada{selSources.length!==1?"s":""}</span>
+                      <span style={{fontSize:9,color:G.textMut}}>{showSources?"▲ Ocultar":"▼ Ver las 20 fuentes"}</span>
+                    </button>
+                    {showSources&&(
+                      <div style={{border:`1px solid ${G.brd}`,borderRadius:8,padding:"12px",marginTop:6,display:"flex",flexWrap:"wrap",gap:5,maxHeight:160,overflowY:"auto"}}>
+                        {RECIPE_SOURCES.map(s=>{
+                          const on=selSources.includes(s.id);
+                          return(
+                            <button key={s.id} onClick={()=>toggleSource(s.id)} style={{padding:"3px 10px",border:`1px solid ${on?G.blue:G.brd}`,borderRadius:20,background:on?G.blueTint:G.w,color:on?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:10,fontWeight:on?600:400,transition:"all .12s"}}>
+                              {on?"✓ ":""}{s.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  {/* Search bar */}
+                  <div style={{display:"flex",gap:6,marginBottom:10}}>
+                    <input value={webQuery} onChange={e=>setWebQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchWeb()} placeholder="Buscar receta… ej: risotto de trufa" style={inp({flex:1,padding:"8px 12px",fontSize:12})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                    <button onClick={searchWeb} disabled={webLoading} style={bv("p",{padding:"8px 14px",fontSize:11,borderRadius:6,opacity:webLoading?.6:1})} onMouseOver={e=>{if(!webLoading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                      {webLoading?"…":"Buscar"}
+                    </button>
+                  </div>
+                  {/* Error */}
+                  {webError&&<p style={{color:G.red,fontSize:11,fontFamily:FB,margin:"0 0 8px"}}>{webError}</p>}
+                  {/* Loading */}
+                  {webLoading&&<p style={{color:G.textMut,fontSize:11,fontFamily:FB,fontStyle:"italic"}}>Buscando en la web…</p>}
+                  {/* Results */}
+                  {webResults.length>0&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {webResults.map((r,i)=>(
+                        <div key={i} style={{border:`1px solid ${G.brd}`,borderRadius:8,padding:"10px 12px",background:G.surf}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:4}}>
+                            <div>
+                              {r.url
+                                ?<a href={r.url} target="_blank" rel="noopener noreferrer" style={{fontFamily:FH,fontSize:13,color:G.blue,fontWeight:700,textDecoration:"none"}}>{r.name}</a>
+                                :<span style={{fontFamily:FH,fontSize:13,color:G.text,fontWeight:700}}>{r.name}</span>}
+                              {r.source&&<span style={{display:"block",fontSize:10,color:G.textMut,fontFamily:FB}}>{r.source}</span>}
+                            </div>
+                            <button onClick={()=>setWebIngList(r.ingredients||[])} style={bv("p",{padding:"4px 10px",fontSize:10,borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                              Usar
+                            </button>
+                          </div>
+                          {r.description&&<p style={{margin:"0 0 6px",fontSize:11,color:G.textMid,fontFamily:FB,lineHeight:1.5}}>{r.description}</p>}
+                          {r.ingredients?.length>0&&(
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {r.ingredients.slice(0,6).map(n=><span key={n} style={{background:G.brd+"44",color:G.textMid,padding:"2px 7px",borderRadius:20,fontSize:9,fontFamily:FB}}>{n}</span>)}
+                              {r.ingredients.length>6&&<span style={{color:G.textMut,fontSize:9,fontFamily:FB,alignSelf:"center"}}>+{r.ingredients.length-6} más</span>}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Web ingredients in use */}
+                  {webIngList.length>0&&(
+                    <div style={{marginTop:10,padding:"10px 12px",background:G.blueTint,border:`1px solid ${G.blue}20`,borderRadius:8}}>
+                      <p style={{fontFamily:FB,fontSize:10,color:G.blue,fontWeight:600,margin:"0 0 6px",letterSpacing:.5,textTransform:"uppercase"}}>Ingredientes cargados</p>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {webIngList.map(n=><span key={n} style={{background:G.w,border:`1px solid ${G.blue}30`,color:G.blue,padding:"3px 9px",borderRadius:20,fontSize:10,fontFamily:FB,display:"flex",alignItems:"center",gap:4}}>
+                          {n}<button onClick={()=>setWebIngList(p=>p.filter(x=>x!==n))} style={{background:"none",border:"none",color:G.blue,cursor:"pointer",fontSize:11,padding:0,lineHeight:1}}>×</button>
+                        </span>)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Selected from wheel */}
+          <div style={{border:`1px solid ${G.brd}`,borderRadius:12,padding:"14px 18px",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+            <p style={{fontFamily:FH,fontSize:15,color:G.text,margin:"0 0 10px",fontWeight:700}}>Selección en Rueda</p>
+            {selected.length===0
+              ?<p style={{color:G.textMut,fontSize:11,margin:0,fontStyle:"italic",fontFamily:FB}}>Haz clic en ingredientes de la rueda</p>
+              :<><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:10}}>
+                  {selected.map(name=>{const sec=SECTORS.find(s=>s.ings.includes(name));return(
+                    <button key={name} onClick={()=>toggle(name)} style={{background:sec?.col+"15",border:`1px solid ${sec?.col}44`,color:G.text,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:FB,fontSize:11,display:"flex",alignItems:"center",gap:5}}>
+                      {name}<span style={{color:sec?.col,fontSize:10}}>×</span>
+                    </button>
+                  );})}
+                </div>
+                <button onClick={()=>{setSelected([]);setActivePair(null);setConcept(null);}} style={{...bv("ghost",{fontSize:10,padding:"3px 10px",borderRadius:6,color:G.red,borderColor:G.red+"44"})}}>Limpiar</button>
+              </>}
+          </div>
+
+          {/* Affinities */}
+          {knownPairs.length>0&&(
+            <div style={{border:`1px solid ${G.brd}`,borderRadius:12,padding:"14px 18px",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+              <p style={{fontFamily:FH,fontSize:15,color:G.text,margin:"0 0 10px",fontWeight:700}}>Afinidades Detectadas</p>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {knownPairs.map(({a,b,aff})=>{
+                  const col=affCol(aff.t);
+                  const isAct=activePair?.a===a&&activePair?.b===b;
+                  return(
+                    <button key={a+b} onClick={()=>setActivePair(isAct?null:{a,b,aff})} style={{background:isAct?col+"0C":"transparent",border:`1px solid ${isAct?col+"44":G.brd}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:isAct?4:0}}>
+                        <span style={{background:col+"18",border:`1px solid ${col}44`,borderRadius:20,padding:"1px 8px",fontSize:9,color:col,fontWeight:700,fontFamily:FB}}>{affLabel(aff.t)}</span>
+                        <span style={{fontFamily:FH,fontSize:13,color:G.text,fontWeight:600}}>{a} × {b}</span>
+                      </div>
+                      {aff.mol&&<div style={{fontSize:9,color:col,marginBottom:isAct?4:0,fontFamily:FB,fontWeight:500}}>Molécula: {aff.mol}</div>}
+                      {isAct&&<p style={{margin:0,fontSize:11,color:G.textMid,lineHeight:1.7,fontFamily:FB}}>{aff.note}</p>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Spark */}
+          {allIngsForSpark.length>=2&&(
+            <div style={{border:`1px solid ${G.brd}`,borderRadius:12,padding:"16px 18px",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:concept||loading?14:0}}>
+                <div>
+                  <p style={{fontFamily:FH,fontSize:16,color:G.text,margin:"0 0 2px",fontWeight:700}}>Spark de Concepto</p>
+                  <p style={{fontFamily:FB,fontSize:10,color:G.textMut,margin:0}}>3 recetas · estilo Segnit & Chartier</p>
+                </div>
+                <button onClick={generateConcept} disabled={loading} style={bv("p",{padding:"8px 16px",fontSize:11,opacity:loading?.65:1,borderRadius:6})} onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                  {loading?"Generando…":"✦ Generar"}
+                </button>
+              </div>
+              {loading&&<div style={{textAlign:"center",padding:"20px",color:G.textMut,fontSize:12,fontStyle:"italic",fontFamily:FB}}>Explorando familias aromáticas…</div>}
+              {/* Error string */}
+              {concept&&typeof concept==="string"&&(
+                <div style={{background:"#FFF0F0",border:`1px solid ${G.red}30`,borderRadius:8,padding:"12px 14px",fontSize:12,color:G.red,fontFamily:FB}}>{concept}</div>
+              )}
+              {/* Recipe cards list */}
+              {concept&&Array.isArray(concept)&&(
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {concept.map((c,i)=><SparkCard key={i} card={c} index={i} defaultOpen={i===0} onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Instructions */}
+          {selected.length===0&&builderIngs.length===0&&(
+            <div style={{border:`1px solid ${G.brd}`,borderRadius:12,padding:"16px 18px",background:G.surf}}>
+              <p style={{fontFamily:FB,fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:10}}>Cómo usar</p>
+              {["Selecciona hasta 8 ingredientes en la rueda haciendo clic","Usa el constructor para añadir ingredientes libres o jalar una receta del repositorio","El botón Generar crea un concepto de plato o cóctel inspirado en Segnit y Chartier","Cambia entre Cocina, Bar o Cocina + Bar según lo que explores"].map((t,i)=>(
+                <div key={i} style={{display:"flex",gap:10,marginBottom:6,alignItems:"flex-start"}}>
+                  <span style={{background:G.blue,color:G.w,width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,flexShrink:0,marginTop:1,fontFamily:FH}}>{i+1}</span>
+                  <p style={{margin:0,fontSize:11,color:G.textMid,lineHeight:1.6,fontFamily:FB}}>{t}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          </>)}
+        </div>
+      </div>
+      </>}
+    </div>
+  );
+}
+
+/* ══ NECESIDAD LAB ══ */
+const QUICK_FILTERS=[
+  {group:"Tipo",items:["Entrada","Sopa","Ensalada","Plato principal","Postre","Desayuno","Merienda","Snack","Para compartir"]},
+  {group:"Para quién",items:["Para niños","Para bebés (6m+)","Para adultos","Para una cita","Para una reunión","Para un buffet"]},
+  {group:"Restricciones",items:["Saludable","Vegetariano","Vegano","Sin gluten","Sin lactosa","Sin mariscos","Sin frutos secos","Bajo en calorías","Alto en proteína","Keto"]},
+  {group:"Tiempo",items:["Rápido (< 30 min)","Rápido (< 45 min)","Media hora","Para el fin de semana","Requiere marinado"]},
+  {group:"Estilo",items:["Económico","Gourmet","Tradicional","Fusión","Peruano","Mediterráneo","Asiático","Mexicano"]},
+];
+
+function NecesidadLab({onAddRecipe,onOpenRecipes}){
+  const[query,setQuery]=useState("");
+  const[selFilters,setSelFilters]=useState([]);
+  const[results,setResults]=useState(null);
+  const[loading,setLoading]=useState(false);
+  const[error,setError]=useState("");
+
+  const toggleF=f=>setSelFilters(p=>p.includes(f)?p.filter(x=>x!==f):[...p,f]);
+
+  const search=async()=>{
+    const q=[query.trim(),...selFilters].filter(Boolean).join(". ");
+    if(!q){setError("Describe lo que necesitas o elige un filtro");return;}
+    setLoading(true);setResults(null);setError("");
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:AHEADERS(),
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,
+          system:"Eres un chef experto y nutricionista. Generas sugerencias de platos creativas, prácticas y apetitosas. Respondes SOLO con JSON válido, sin texto extra.",
+          messages:[{role:"user",content:`El usuario necesita: "${q}"\n\nSugiere 6 platos ideales. Responde SOLO con este JSON válido (conciso):\n[\n  {\n    "nombre": "Nombre del plato",\n    "descripcion": "Descripción apetitosa en 1 frase",\n    "categoria": "Categoría (Entradas/Carnes/Postres/etc)",\n    "dificultad": "Fácil/Media/Alta",\n    "tiempo": "XX min",\n    "porqué": "Por qué encaja perfectamente con lo que necesitas"\n  }\n]`}]})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data?.error?.message||"Error API");
+      const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
+      const m=raw.match(/\[[\s\S]*\]/);
+      const parsed=JSON.parse(m?m[0]:raw);
+      setResults(parsed);
+    }catch(e){setError("Error: "+e.message);}
+    setLoading(false);
+  };
+
+  return(
+    <div style={{maxWidth:1200,margin:"0 auto"}}>
+      {/* Search box */}
+      <div style={{border:`1px solid ${G.brd}`,borderRadius:12,padding:"22px 24px",marginBottom:24,background:G.w,boxShadow:"0 2px 12px rgba(0,0,0,.04)"}}>
+        <p style={{fontFamily:FH,fontSize:20,color:G.text,margin:"0 0 6px",fontWeight:700}}>¿Qué necesitas?</p>
+        <p style={{fontFamily:FB,fontSize:12,color:G.textMut,margin:"0 0 16px"}}>Describe la ocasión, para quién es, qué ingredientes tienes, o simplemente qué te apetece</p>
+        <div style={{display:"flex",gap:8,marginBottom:16}}>
+          <textarea value={query} onChange={e=>setQuery(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&(e.preventDefault(),search())}
+            placeholder="Ej: quiero un postre para el cumpleaños de mi hijo de 6 años, le encanta el chocolate y no puede comer nueces…"
+            rows={2}
+            style={{...inp({flex:1,resize:"none",fontSize:13,lineHeight:1.6,padding:"10px 14px"})}}
+            onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+          <button onClick={search} disabled={loading} style={bv("p",{padding:"10px 20px",fontSize:13,borderRadius:8,alignSelf:"stretch",opacity:loading?.65:1})}
+            onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+            {loading?"Buscando…":"✦ Buscar"}
+          </button>
+        </div>
+        {/* Quick filters */}
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          {QUICK_FILTERS.map(({group,items})=>(
+            <div key={group} style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+              <span style={{fontFamily:FB,fontSize:9,color:G.textMut,letterSpacing:1.5,textTransform:"uppercase",fontWeight:600,minWidth:70,flexShrink:0}}>{group}</span>
+              {items.map(f=>{
+                const on=selFilters.includes(f);
+                return(
+                  <button key={f} onClick={()=>toggleF(f)} style={{padding:"3px 10px",border:`1px solid ${on?G.blue:G.brd}`,borderRadius:20,background:on?G.blueTint:G.w,color:on?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:11,fontWeight:on?600:400,transition:"all .12s"}}>
+                    {on?"✓ ":""}{f}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        {selFilters.length>0&&<button onClick={()=>setSelFilters([])} style={{...bv("ghost",{fontSize:10,padding:"4px 10px",borderRadius:6,marginTop:8,color:G.red,borderColor:G.red+"44"})}} onMouseOver={e=>e.currentTarget.style.background=G.red+"06"} onMouseOut={e=>e.currentTarget.style.background="transparent"}>Limpiar filtros ({selFilters.length})</button>}
+        {error&&<p style={{color:G.red,fontSize:12,fontFamily:FB,margin:"8px 0 0"}}>{error}</p>}
+      </div>
+
+      {/* Loading */}
+      {loading&&<div style={{textAlign:"center",padding:"40px",color:G.textMut,fontSize:14,fontFamily:FB,fontStyle:"italic"}}>Explorando opciones culinarias…</div>}
+
+      {/* Results */}
+      {results&&(
+        <div>
+          <p style={{fontFamily:FB,fontSize:11,color:G.textMut,marginBottom:16}}>{results.length} sugerencias · haz clic en una para ver la receta completa</p>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))",gap:14}}>
+            {results.map((dish,i)=><DishCard key={i} dish={dish} index={i} onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>)}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!results&&!loading&&(
+        <div style={{textAlign:"center",padding:"48px 0",color:G.textMut}}>
+          <p style={{fontSize:36,margin:"0 0 12px"}}>💡</p>
+          <p style={{fontFamily:FH,fontSize:20,color:G.text,margin:"0 0 6px",fontWeight:700}}>Describe lo que necesitas</p>
+          <p style={{fontFamily:FB,fontSize:13,margin:0}}>Usa el buscador o los filtros rápidos para encontrar el plato ideal</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══ DISH CARD ══ */
+function DishCard({dish,index,onAddRecipe,onOpenRecipes}){
+  const[open,setOpen]=useState(false);
+  const[creating,setCreating]=useState(false);
+  const[saved,setSaved]=useState(false);
+  const catColors={"Entradas":"#1B4FD8","Postres":"#7C3AED","Carnes":"#DC2626","Pescados & Mariscos":"#0891B2","Sopas & Caldos":"#059669","Vegetariano & Vegano":"#16A34A","Panadería & Repostería":"#D97706","Bebidas & Cócteles":"#7C3AED"};
+  const col=catColors[dish.categoria]||G.blue;
+  const difColor=d=>d==="Fácil"?G.green:d==="Media"?G.gold:G.red;
+
+  const createRecipe=async()=>{
+    setCreating(true);
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:AHEADERS(),
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,
+          system:"Eres un chef experto. Respondes SOLO con JSON válido, sin texto extra, sin backticks.",
+          messages:[{role:"user",content:`Plato: "${dish.nombre}" — ${dish.descripcion}\nCategoría: ${dish.categoria}\n\nGenera la receta completa. Responde SOLO con este JSON válido:\n{\n  "name": "${dish.nombre}",\n  "category": "${dish.categoria}",\n  "portions": 4,\n  "plating": "Descripción del emplatado",\n  "cutlery": ["fork_knife"],\n  "steps": [\n    {\n      "name": "Nombre del paso",\n      "method": "Metodología detallada",\n      "ingredients": [\n        {"name": "Ingrediente", "quantity": 200, "unit": "g", "yieldPct": 90}\n      ]\n    }\n  ]\n}`}]})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data?.error?.message||"Error API");
+      const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
+      const m=raw.match(/\{[\s\S]*\}/);const parsed=JSON.parse(m?m[0]:raw);
+      const recipe={...parsed,id:Math.random().toString(36).substr(2,9),photo:null,colls:[],
+        steps:(parsed.steps||[]).map(s=>({...s,id:Math.random().toString(36).substr(2,9),
+          ingredients:(s.ingredients||[]).map(i=>({...i,id:Math.random().toString(36).substr(2,9)}))}))};
+      onAddRecipe&&onAddRecipe(recipe);setSaved(true);
+    }catch(e){alert("Error al crear receta: "+e.message);}
+    setCreating(false);
+  };
+
+  return(
+    <div style={{border:`1px solid ${G.brd}`,borderRadius:10,overflow:"hidden",background:G.w,boxShadow:open?"0 4px 16px rgba(0,0,0,.06)":"0 1px 4px rgba(0,0,0,.04)",transition:"box-shadow .2s"}}>
+      {/* Card header */}
+      <button onClick={()=>setOpen(p=>!p)} style={{width:"100%",background:G.w,border:"none",cursor:"pointer",padding:"16px 18px",textAlign:"left",display:"flex",flexDirection:"column",gap:8,transition:"background .15s"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap",alignItems:"center"}}>
+              <span style={{background:col+"15",border:`1px solid ${col}33`,padding:"2px 8px",borderRadius:20,fontSize:9,color:col,fontWeight:700,fontFamily:FB}}>{dish.categoria}</span>
+              <span style={{background:difColor(dish.dificultad)+"15",border:`1px solid ${difColor(dish.dificultad)}33`,padding:"2px 8px",borderRadius:20,fontSize:9,color:difColor(dish.dificultad),fontWeight:600,fontFamily:FB}}>{dish.dificultad}</span>
+              {dish.tiempo&&<span style={{fontSize:10,color:G.textMut,fontFamily:FB}}>⏱ {dish.tiempo}</span>}
+            </div>
+            <p style={{fontFamily:FH,fontSize:17,color:G.text,margin:"0 0 4px",fontWeight:700,lineHeight:1.2}}>{dish.nombre}</p>
+            <p style={{fontFamily:FB,fontSize:12,color:G.textMid,margin:0,lineHeight:1.5}}>{dish.descripcion}</p>
+          </div>
+          <span style={{color:G.textMut,fontSize:14,flexShrink:0,transform:open?"rotate(180deg)":"none",transition:"transform .2s",marginTop:4}}>▾</span>
+        </div>
+      </button>
+      {/* Expanded */}
+      {open&&(
+        <div style={{padding:"14px 18px 16px",borderTop:`1px solid ${G.brd}`,display:"flex",flexDirection:"column",gap:12}}>
+          {dish.porqué&&<div style={{background:G.blueTint,border:`1px solid ${G.blue}20`,borderRadius:8,padding:"10px 14px"}}>
+            <p style={{fontFamily:FB,fontSize:9,color:G.blue,letterSpacing:2,textTransform:"uppercase",fontWeight:600,margin:"0 0 4px"}}>Por qué es ideal</p>
+            <p style={{fontFamily:FB,fontSize:12,color:G.textMid,margin:0,lineHeight:1.6}}>{dish.porqué}</p>
+          </div>}
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            {!saved
+              ?<button onClick={createRecipe} disabled={creating} style={{...bv("p",{padding:"8px 16px",fontSize:11,borderRadius:6,opacity:creating?.65:1}),display:"flex",alignItems:"center",gap:6}}
+                  onMouseOver={e=>{if(!creating)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                  {creating?"Generando receta…":"📋 Crear Receta Completa"}
+                </button>
+              :<>
+                <span style={{fontFamily:FB,fontSize:11,color:G.green,fontWeight:600}}>✓ Guardada en repositorio</span>
+                <button onClick={()=>onOpenRecipes&&onOpenRecipes()} style={bv("ghost",{fontSize:11,padding:"6px 12px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>Ver en Recetas →</button>
+              </>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══ CATEGORY BROWSER ══ */
+function CategoryBrowser({cat,extended,custom,selected,onToggle,onClose,search,setSearch,onAddCustom}){
+  const[newIng,setNewIng]=useState("");
+  const filtered=extended.filter(n=>n.toLowerCase().includes(search.toLowerCase()));
+  const selCount=extended.filter(n=>selected.includes(n)).length;
+  const handleAdd=()=>{
+    const n=newIng.trim();
+    if(!n)return;
+    if(!extended.includes(n)) onAddCustom(n);
+    else onToggle(n);
+    setNewIng("");
+  };
+  return(
+    <div style={{border:`1px solid ${cat.col}44`,borderRadius:12,overflow:"hidden",background:G.w,boxShadow:`0 2px 16px ${cat.col}18`}}>
+      {/* Header */}
+      <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.brd}`,background:cat.col+"0E",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:G.textMut,fontFamily:FB,fontSize:12,padding:"3px 6px",borderRadius:4}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=G.textMut}>← Volver</button>
+        <div style={{width:11,height:11,borderRadius:"50%",background:cat.col,flexShrink:0}}/>
+        <div style={{flex:1}}>
+          <p style={{fontFamily:FH,fontSize:16,color:G.text,margin:0,fontWeight:700}}>{cat.name}</p>
+          <p style={{fontFamily:FB,fontSize:10,color:G.textMut,margin:0}}>{extended.length} ingredientes · {selCount} seleccionados</p>
+        </div>
+      </div>
+      {/* Search */}
+      <div style={{padding:"10px 14px",borderBottom:`1px solid ${G.brd}`,background:G.surf}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Buscar en ${cat.name}…`}
+          style={inp({fontSize:12,padding:"7px 11px"})}
+          onFocus={e=>e.target.style.borderColor=cat.col} onBlur={e=>e.target.style.borderColor=G.brd}/>
+      </div>
+      {/* Add custom ingredient */}
+      <div style={{padding:"10px 14px",borderBottom:`1px solid ${G.brd}`,display:"flex",gap:6}}>
+        <input value={newIng} onChange={e=>setNewIng(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleAdd()}
+          placeholder="Agregar ingrediente que no está en la lista…"
+          style={inp({flex:1,fontSize:11,padding:"6px 10px",borderStyle:"dashed"})}
+          onFocus={e=>e.target.style.borderColor=cat.col} onBlur={e=>e.target.style.borderColor=G.brd}/>
+        <button onClick={handleAdd} style={bv("p",{padding:"6px 14px",fontSize:13,borderRadius:6,fontWeight:700,background:cat.col,border:"none"})}
+          onMouseOver={e=>e.currentTarget.style.opacity=".85"} onMouseOut={e=>e.currentTarget.style.opacity="1"}>+</button>
+      </div>
+      {/* Ingredient grid */}
+      <div style={{padding:"12px 14px",display:"flex",flexWrap:"wrap",gap:6,maxHeight:"55vh",overflowY:"auto"}}>
+        {/* Custom ingredients first with badge */}
+        {(custom||[]).filter(n=>n.toLowerCase().includes(search.toLowerCase())).map(n=>{
+          const isSel=selected.includes(n);
+          return(
+            <button key={`c-${n}`} onClick={()=>onToggle(n)} style={{padding:"4px 11px",border:`1px solid ${isSel?cat.col:"#D97706"}`,borderRadius:20,background:isSel?cat.col+"18":"#FFF7ED",color:isSel?cat.col:"#92400E",cursor:"pointer",fontFamily:FB,fontSize:11,fontWeight:isSel?700:500,transition:"all .15s",display:"flex",alignItems:"center",gap:4}}>
+              <span style={{fontSize:8,opacity:.7}}>★</span>{n}{isSel&&<span style={{fontSize:9}}>✓</span>}
+            </button>
+          );
+        })}
+        {filtered.length===0&&(custom||[]).filter(n=>n.toLowerCase().includes(search.toLowerCase())).length===0&&<p style={{color:G.textMut,fontSize:12,fontFamily:FB,fontStyle:"italic"}}>Sin resultados — prueba agregarlo con el campo de arriba</p>}
+        {filtered.map(n=>{
+          const isSel=selected.includes(n);
+          return(
+            <button key={n} onClick={()=>onToggle(n)} style={{padding:"4px 11px",border:`1px solid ${isSel?cat.col:G.brd}`,borderRadius:20,background:isSel?cat.col+"15":G.w,color:isSel?cat.col:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:11,fontWeight:isSel?700:400,transition:"all .15s",display:"flex",alignItems:"center",gap:4}}>
+              {isSel&&<span style={{fontSize:9}}>✓</span>}{n}
+            </button>
+          );
+        })}
+      </div>
+      {selCount>0&&<div style={{padding:"8px 14px",borderTop:`1px solid ${G.brd}`,background:G.surf}}>
+        <p style={{fontFamily:FB,fontSize:10,color:G.textMut,margin:0}}>{selCount} ingrediente{selCount!==1?"s":""} de esta familia en tu selección</p>
+      </div>}
+    </div>
+  );
+}
+
+/* ══ SPARK CARD — expandable recipe concept ══ */
+function SparkCard({card, index, defaultOpen, onAddRecipe, onOpenRecipes}){
+  const[open,setOpen]=useState(defaultOpen||false);
+  const[creating,setCreating]=useState(false);
+  const[saved,setSaved]=useState(false);
+  const colors=["#1B4FD8","#059669","#7C3AED"];
+  const col=colors[index%colors.length];
+
+  const createRecipe=async()=>{
+    setCreating(true);
+    try{
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",headers:AHEADERS(),
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,
+          system:"Eres un chef experto. Respondes SOLO con JSON válido, sin texto extra, sin backticks.",
+          messages:[{role:"user",content:`Concepto de plato:
+Nombre: "${card.nombre}"
+Descripción: "${card.descripcion}"
+Lógica aromática: "${card.logica}"
+Técnica: "${card.tecnica}"
+
+Genera una receta completa. Responde SOLO con este JSON válido:
+{
+  "name": "${card.nombre}",
+  "category": "Entradas",
+  "portions": 4,
+  "plating": "Descripción del emplatado final",
+  "cutlery": ["fork_knife"],
+  "steps": [
+    {
+      "name": "Nombre del paso",
+      "method": "Metodología detallada paso a paso",
+      "ingredients": [
+        {"name": "Ingrediente", "quantity": 200, "unit": "g", "yieldPct": 90}
+      ]
+    }
+  ]
+}`}]})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data?.error?.message||"Error API");
+      const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
+      const m=raw.match(/\{[\s\S]*\}/);
+      const parsed=JSON.parse(m?m[0]:raw);
+      // Normalize steps with gid
+      const recipe={
+        ...parsed,
+        id: Math.random().toString(36).substr(2,9),
+        photo: null, colls:[],
+        steps:(parsed.steps||[]).map(s=>({
+          ...s, id:Math.random().toString(36).substr(2,9),
+          ingredients:(s.ingredients||[]).map(i=>({...i,id:Math.random().toString(36).substr(2,9)}))
+        }))
+      };
+      onAddRecipe&&onAddRecipe(recipe);
+      setSaved(true);
+    }catch(e){ alert("Error al crear receta: "+e.message); }
+    setCreating(false);
+  };
+
+  return(
+    <div style={{border:`1px solid ${G.brd}`,borderRadius:10,overflow:"hidden",transition:"box-shadow .2s",boxShadow:open?"0 4px 16px rgba(0,0,0,.06)":"none"}}>
+      {/* Header */}
+      <button onClick={()=>setOpen(p=>!p)} style={{width:"100%",background:open?col+"08":G.surf,border:"none",cursor:"pointer",padding:"12px 16px",textAlign:"left",display:"flex",alignItems:"center",gap:12,transition:"background .15s"}}>
+        <div style={{width:24,height:24,borderRadius:"50%",background:col,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0,fontFamily:FH}}>{index+1}</div>
+        <div style={{flex:1}}>
+          <p style={{fontFamily:FH,fontSize:15,color:G.text,margin:"0 0 2px",fontWeight:700,lineHeight:1.2}}>{card.nombre}</p>
+          <p style={{fontFamily:FB,fontSize:11,color:G.textMid,margin:0,lineHeight:1.4}}>{card.descripcion}</p>
+        </div>
+        <span style={{color:G.textMut,fontSize:14,flexShrink:0,transform:open?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
+      </button>
+      {/* Detail */}
+      {open&&(
+        <div style={{padding:"14px 16px 16px",borderTop:`1px solid ${G.brd}`,display:"flex",flexDirection:"column",gap:12}}>
+          <div>
+            <p style={{fontFamily:FB,fontSize:9,color:col,letterSpacing:2,textTransform:"uppercase",fontWeight:600,margin:"0 0 5px"}}>Lógica Aromática</p>
+            <p style={{fontFamily:FB,fontSize:12,color:G.textMid,margin:0,lineHeight:1.7}}>{card.logica}</p>
+          </div>
+          <div>
+            <p style={{fontFamily:FB,fontSize:9,color:col,letterSpacing:2,textTransform:"uppercase",fontWeight:600,margin:"0 0 5px"}}>Propuesta Técnica</p>
+            <p style={{fontFamily:FB,fontSize:12,color:G.textMid,margin:0,lineHeight:1.7}}>{card.tecnica}</p>
+          </div>
+          {/* Crear Receta */}
+          <div style={{borderTop:`1px solid ${G.brd}`,paddingTop:12,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            {!saved
+              ?<button onClick={createRecipe} disabled={creating} style={{...bv("p",{padding:"8px 16px",fontSize:11,borderRadius:6,background:col,opacity:creating?.65:1}),display:"flex",alignItems:"center",gap:6}}
+                  onMouseOver={e=>{if(!creating)e.currentTarget.style.opacity=".85";}} onMouseOut={e=>e.currentTarget.style.opacity="1"}>
+                  {creating?"Generando receta…":"📋 Crear Receta Completa"}
+                </button>
+              :<>
+                <span style={{fontFamily:FB,fontSize:11,color:G.green,fontWeight:600}}>✓ Receta guardada en el repositorio</span>
+                <button onClick={()=>{onOpenRecipes&&onOpenRecipes();}} style={bv("ghost",{fontSize:11,padding:"6px 12px",borderRadius:6})}
+                  onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
+                  Ver en Recetas →
+                </button>
+              </>}
+            <span style={{fontFamily:FB,fontSize:10,color:G.textMut,flex:1}}>
+              {!saved&&!creating?"Genera ingredientes con cantidades y metodología paso a paso":""}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══ FLAVOR WHEEL SVG ══ */
+function FlavorWheel({sectors,selected,hoverIng,onToggle,onHover,mode,onCatClick}){
+  const TOTAL=sectors.length,DEG=360/TOTAL;
+  const BAR_IDS=["spirits","bar"];
+  return(
+    <svg viewBox="0 0 760 760" width="100%" style={{display:"block"}}>
+      {/* White background */}
+      <rect x="0" y="0" width="760" height="760" fill="white"/>
+      {/* Sectors */}
+      {sectors.map((s,idx)=>{
+        const start=idx*DEG,end=start+DEG;
+        const isBar=BAR_IDS.includes(s.id);
+        const dimmed=mode==="cocina"&&isBar||mode==="bar"&&!isBar;
+        const hasSel=s.ings.some(n=>selected.includes(n));
+        return <path key={s.id} d={slicePath(start,end)} fill={s.col} opacity={dimmed?.15:hasSel?1:.82} stroke="#fff" strokeWidth="1.2"/>;
+      })}
+      {/* Family labels — RADIAL (perpendicular, readable on all sides) */}
+      {sectors.map((s,idx)=>{
+        const start=idx*DEG,end=start+DEG,mid=(start+end)/2;
+        const [lx,ly]=pt(R_LABEL,mid);
+        const isLeft=Math.cos(clockToRad(mid))<0;
+        const rotation=isLeft?(mid+90):(mid-90);
+        const isBar=BAR_IDS.includes(s.id);
+        const dimmed=mode==="cocina"&&isBar||mode==="bar"&&!isBar;
+        return(
+          <text key={`lbl-${s.id}`} x={lx} y={ly}
+            textAnchor="middle" dominantBaseline="middle"
+            fontSize="8.5" fontStyle="italic"
+            fontFamily="'Inter',sans-serif"
+            fill={dimmed?"rgba(200,200,200,.18)":"rgba(255,255,255,.92)"}
+            fontWeight="500"
+            transform={`rotate(${rotation},${lx},${ly})`}
+            style={{cursor:"pointer",userSelect:"none"}}
+            onClick={()=>onCatClick&&onCatClick(s.id)}
+          >{s.name}</text>
+        );
+      })}
+      {/* Separator lines */}
+      {sectors.map((_,idx)=>{
+        const[sx,sy]=pt(3,idx*DEG),[ex,ey]=pt(R_SECTOR,idx*DEG);
+        return <line key={`sep-${idx}`} x1={sx} y1={sy} x2={ex} y2={ey} stroke="#fff" strokeWidth="1" opacity=".7"/>;
+      })}
+      {/* Ingredient labels */}
+      {sectors.map((s,idx)=>{
+        const start=idx*DEG;
+        const isBar=BAR_IDS.includes(s.id);
+        const dimmed=mode==="cocina"&&isBar||mode==="bar"&&!isBar;
+        return s.ings.map((name,ii)=>{
+          const slot=DEG/s.ings.length,angle=start+slot*(ii+.5);
+          const rad=clockToRad(angle),[ix,iy]=pt(R_ING,angle);
+          const isLeft=Math.cos(rad)<0,svgDeg=angle-90;
+          const rotation=isLeft?svgDeg+180:svgDeg,anchor=isLeft?"end":"start";
+          const isSel=selected.includes(name),isHov=hoverIng===name;
+          return(
+            <text key={`ing-${s.id}-${ii}`} x={ix} y={iy} textAnchor={anchor}
+              fontSize={isSel||isHov?"10":"8.5"} fontFamily="'Inter',sans-serif"
+              fontWeight={isSel?"700":"400"}
+              fill={dimmed?"rgba(160,160,160,.2)":isSel?"#1B4FD8":isHov?"#0A0F1A":"#4A5568"}
+              transform={`rotate(${rotation},${ix},${iy})`}
+              style={{cursor:"pointer"}}
+              onClick={()=>!dimmed&&onToggle(name)}
+              onMouseOver={()=>!dimmed&&onHover(name)}
+              onMouseOut={()=>onHover(null)}>
+              {name}
+            </text>
+          );
+        });
+      })}
+      {/* Selected dots */}
+      {selected.map(name=>{
+        const sec=sectors.find(s=>s.ings.includes(name));if(!sec)return null;
+        const idx=sectors.indexOf(sec),ii=sec.ings.indexOf(name),slot=DEG/sec.ings.length;
+        const angle=idx*DEG+slot*(ii+.5),[dx,dy]=pt(R_SECTOR-9,angle);
+        return <circle key={`dot-${name}`} cx={dx} cy={dy} r={4} fill="#1B4FD8" opacity=".9"/>;
+      })}
+      {/* Hover dot */}
+      {hoverIng&&(()=>{
+        const sec=sectors.find(s=>s.ings.includes(hoverIng));if(!sec)return null;
+        const idx=sectors.indexOf(sec),ii=sec.ings.indexOf(hoverIng),slot=DEG/sec.ings.length;
+        const angle=idx*DEG+slot*(ii+.5),[hx,hy]=pt(R_ING-4,angle);
+        return <circle cx={hx} cy={hy} r={3} fill="#1B4FD8" opacity=".5"/>;
+      })()}
+      {/* Center dot */}
+      <circle cx={CX} cy={CY} r={4} fill="#1B4FD8" opacity=".7"/>
+    </svg>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
