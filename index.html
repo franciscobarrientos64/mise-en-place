@@ -222,7 +222,7 @@ function App(){
     <div style={{fontFamily:FB,background:G.bg,minHeight:"100vh",color:G.text}}>
       <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")}/>
       {nav==="recipes"&&<>
-        {{view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{setRec(p=>[...p,{...r,id:gid()}]);}} onEdit={startEdit} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}}
+        {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{setRec(p=>[...p,{...r,id:gid()}]);}} onEdit={startEdit} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
         {view==="detail"&&sel&&<Detail recipe={sel} tab={tab} setTab={setTab} country={country} setCountry={setCtry} co={co} getP={getP} setP={setP} onDelete={()=>delR(sel.id)} colls={colls} onUpdate={updR} onEdit={()=>startEdit(sel.id)}/>}
         {view==="add"&&<AddRecipe onSave={saveR} onCancel={goBack} colls={colls}/>}
         {view==="edit"&&recipes.find(r=>r.id===editId)&&<AddRecipe initialRecipe={recipes.find(r=>r.id===editId)} onSave={saveEdit} onCancel={()=>setView("detail")} colls={colls}/>}
