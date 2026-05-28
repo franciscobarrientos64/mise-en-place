@@ -339,7 +339,19 @@ function App(){
 
   const[nav,setNav]=useState("recipes");
   const[view,setView]=useState("gallery");
-  const[recipes,setRec]=useState(DEMO_R);
+  const[recipes,setRec]=useState(()=>{
+    try{
+      const saved=localStorage.getItem('mep_recipes');
+      if(saved){const parsed=JSON.parse(saved);if(parsed.length>0)return parsed;}
+    }catch(e){}
+    return DEMO_R;
+  });
+
+  // Auto-save recipes to localStorage on every change
+  useEffect(()=>{
+    try{ localStorage.setItem('mep_recipes',JSON.stringify(recipes)); }
+    catch(e){ console.warn('localStorage full, recipes not saved',e); }
+  },[recipes]);
   const[colls,setColls]=useState(DEMO_C);
   const[selId,setSelId]=useState(null);
   const[tab,setTab]=useState("recipe");
@@ -423,7 +435,13 @@ function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImp
         <p style={{fontFamily:FB,fontSize:11,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Archivo de Recetas</p>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:12}}>
           <h1 style={{fontFamily:FH,fontSize:38,color:G.text,fontWeight:700,letterSpacing:-.5}}>{total} receta{total!==1?"s":""} archivadas</h1>
-          <button onClick={()=>setShowImport(true)} style={bv("ghost",{padding:"8px 16px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>📥 Importar receta</button>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontFamily:FB,fontSize:10,color:G.green,display:"flex",alignItems:"center",gap:4}}>
+              <span style={{width:6,height:6,borderRadius:"50%",background:G.green,display:"inline-block"}}/>
+              Guardado automáticamente
+            </span>
+            <button onClick={()=>setShowImport(true)} style={bv("ghost",{padding:"8px 16px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>📥 Importar receta</button>
+          </div>
         </div>
       </div>
       <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap"}}>
