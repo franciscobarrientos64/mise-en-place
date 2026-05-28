@@ -193,7 +193,149 @@ const DEMO_C=[{id:"c1",name:"Firma",color:COLL_COLORS[0]},{id:"c2",name:"Menú D
    APP
 ══════════════════════════════════════════ */
 
+
+/* ══ BATCH TOAST — persists across navigation (Google Drive style) ══ */
+function BatchToast({items,running,done,saved,total,finished,minimized,onMinimize,onClose}){
+  if(!items.length)return null;
+  const pct=total>0?Math.round(done/total*100):0;
+  const current=items.find(i=>i.status==="processing");
+  const errors=items.filter(i=>i.status==="error").length;
+
+  return(
+    <div style={{position:"fixed",bottom:24,right:24,zIndex:9999,width:320,
+      background:"#1F2937",borderRadius:12,boxShadow:"0 8px 32px rgba(0,0,0,.4)",
+      overflow:"hidden",fontFamily:FB,transition:"all .2s"}}>
+      {/* Header */}
+      <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:8,background:"#111827"}}>
+        <div style={{flex:1}}>
+          {finished
+            ?<span style={{fontSize:12,color:"#D1FAE5",fontWeight:600}}>
+                ✅ {saved} receta{saved!==1?"s":""} importada{saved!==1?"s":""}
+                {errors>0&&<span style={{color:"#FCA5A5",marginLeft:6}}>· {errors} con error</span>}
+              </span>
+            :<span style={{fontSize:12,color:"#E5E7EB",fontWeight:600}}>
+                Importando {done} / {total} recetas…
+              </span>}
+        </div>
+        <button onClick={onMinimize} style={{background:"none",border:"none",color:"#9CA3AF",cursor:"pointer",fontSize:12,padding:"2px 6px",borderRadius:4}} title={minimized?"Expandir":"Minimizar"}>
+          {minimized?"▲":"▼"}
+        </button>
+        {finished&&<button onClick={onClose} style={{background:"none",border:"none",color:"#9CA3AF",cursor:"pointer",fontSize:14,padding:"2px 6px",borderRadius:4}}>✕</button>}
+      </div>
+      {/* Body — hidden when minimized */}
+      {!minimized&&(
+        <div style={{padding:"10px 14px 14px"}}>
+          {/* Progress bar */}
+          <div style={{background:"#374151",borderRadius:20,height:4,marginBottom:10,overflow:"hidden"}}>
+            <div style={{width:pct+"%",background:finished?"#10B981":"#3B82F6",height:"100%",transition:"width .4s",borderRadius:20}}/>
+          </div>
+          {/* Current file */}
+          {running&&current&&(
+            <p style={{fontSize:11,color:"#9CA3AF",margin:"0 0 8px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              ⏳ {current.recipeName||current.name}
+            </p>
+          )}
+          {/* Last few items */}
+          <div style={{maxHeight:110,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
+            {items.filter(i=>i.status!=="pending").slice(-5).map(item=>(
+              <div key={item.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:10,color:item.status==="ok"?"#6EE7B7":item.status==="error"?"#FCA5A5":"#9CA3AF"}}>
+                <span style={{flexShrink:0}}>{item.status==="ok"?"✓":item.status==="error"?"✗":"⏳"}</span>
+                <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.recipeName||item.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══ BATCH HELPERS (used by App-level runBatch) ══ */
+const normalizeRecipe=p=>({...p,photo:p.photo||null,colls:p.colls||[],
+  steps:(p.steps||[]).map(s=>({...s,id:s.id||gid(),
+    ingredients:(s.ingredients||[]).map(i=>({...i,id:i.id||gid()}))}))});
+
+const extractFileForBatch=async(file)=>{
+  const isPDF=file.type==="application/pdf";
+  const isImg=file.type.startsWith("image/");
+  const isJSON=file.name.endsWith(".json");
+  const PROMPT=`Extrae la receta. Responde SOLO JSON: {"name":"...","category":"...","portions":4,"plating":"...","cutlery":["fork_knife"],"steps":[{"name":"...","method":"...","ingredients":[{"name":"...","quantity":100,"unit":"g","yieldPct":90}]}]}`;
+  if(isJSON){
+    const text=await file.text();
+    const data=JSON.parse(text);
+    // Could be single recipe or array — return first if array
+    return Array.isArray(data)?data[0]:data;
+  }
+  const toB64=f=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(f);});
+  let messages;
+  if(isPDF){
+    const b=await toB64(file);
+    messages=[{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:b}},{type:"text",text:PROMPT}]}];
+  }else if(isImg){
+    const b=await toB64(file);
+    messages=[{role:"user",content:[{type:"image",source:{type:"base64",media_type:file.type,data:b}},{type:"text",text:PROMPT}]}];
+  }else{
+    const text=await file.text();
+    messages=[{role:"user",content:PROMPT+"\n\n"+text.slice(0,8000)}];
+  }
+  const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
+    body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,
+      system:"Chef experto. SOLO JSON válido.",messages})});
+  const data=await res.json();
+  if(!res.ok)throw new Error(data?.error?.message||`Error ${res.status}`);
+  const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
+  const m=raw.match(/\{[\s\S]*\}/);
+  return JSON.parse(m?m[0]:raw);
+};
+
 function App(){
+
+  const[hasKey,setHasKey]=useState(()=>!!localStorage.getItem('mep_akey'));
+  if(!hasKey) return <ApiKeySetup onSave={()=>setHasKey(true)}/>;
+  // ── Global batch state (survives navigation) ──
+  const[batchItems,setBatchItems]=useState([]);   // [{id,name,status,recipe,error}]
+  const[batchRunning,setBatchRunning]=useState(false);
+  const[batchDone,setBatchDone]=useState(0);
+  const[batchSaved,setBatchSaved]=useState(0);
+  const[batchVisible,setBatchVisible]=useState(false);
+  const[batchFinished,setBatchFinished]=useState(false);
+  const[batchMinimized,setBatchMinimized]=useState(false);
+
+  const runBatch=async(files)=>{
+    if(batchRunning)return;
+    const items=Array.from(files).map((f,i)=>({id:i,file:f,name:f.name,status:"pending"}));
+    setBatchItems(items);setBatchRunning(true);setBatchDone(0);setBatchSaved(0);
+    setBatchVisible(true);setBatchFinished(false);setBatchMinimized(false);
+    let saved=0;
+    const updated=[...items];
+    for(let i=0;i<updated.length;i++){
+      updated[i]={...updated[i],status:"processing"};
+      setBatchItems([...updated]);
+      try{
+        const parsed=await extractFileForBatch(updated[i].file);
+        const recipe=normalizeRecipe(parsed);
+        setRec(p=>[...p,{...recipe,id:gid()}]);
+        updated[i]={...updated[i],status:"ok",recipeName:parsed.name};
+        saved++;setBatchSaved(saved);
+      }catch(e){
+        updated[i]={...updated[i],status:"error",error:e.message};
+      }
+      setBatchDone(i+1);
+      setBatchItems([...updated]);
+      if(i<updated.length-1)await new Promise(r=>setTimeout(r,700));
+    }
+    setBatchRunning(false);setBatchFinished(true);
+  };
+
+  const runBatchJSON=async(recipes)=>{
+    // For bravazo_mise2.json — array of already-formatted recipes
+    setBatchItems(recipes.map((r,i)=>({id:i,name:r.name,status:"pending"})));
+    setBatchRunning(true);setBatchDone(0);setBatchSaved(recipes.length);
+    setBatchVisible(true);setBatchFinished(false);setBatchMinimized(false);
+    recipes.forEach(r=>setRec(p=>[...p,{...normalizeRecipe(r),id:r.id||gid()}]));
+    setBatchItems(recipes.map((r,i)=>({id:i,name:r.name,status:"ok"})));
+    setBatchDone(recipes.length);setBatchRunning(false);setBatchFinished(true);
+  };
 
   const[nav,setNav]=useState("recipes");
   const[view,setView]=useState("gallery");
@@ -222,13 +364,21 @@ function App(){
     <div style={{fontFamily:FB,background:G.bg,minHeight:"100vh",color:G.text}}>
       <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")}/>
       {nav==="recipes"&&<>
-        {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{setRec(p=>[...p,{...r,id:gid()}]);}} onEdit={startEdit} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
+        {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{setRec(p=>[...p,{...r,id:gid()}]);}} onBatch={runBatch} onBatchJSON={runBatchJSON} onEdit={startEdit} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
         {view==="detail"&&sel&&<Detail recipe={sel} tab={tab} setTab={setTab} country={country} setCountry={setCtry} co={co} getP={getP} setP={setP} onDelete={()=>delR(sel.id)} colls={colls} onUpdate={updR} onEdit={()=>startEdit(sel.id)}/>}
         {view==="add"&&<AddRecipe onSave={saveR} onCancel={goBack} colls={colls}/>}
         {view==="edit"&&recipes.find(r=>r.id===editId)&&<AddRecipe initialRecipe={recipes.find(r=>r.id===editId)} onSave={saveEdit} onCancel={()=>setView("detail")} colls={colls}/>}
       </>}
       {nav==="organize"&&<Organize recipes={recipes} colls={colls} setColls={setColls} onOpen={openR}/>}
       {nav==="lab"&&<FlavorLab recipes={recipes} onAddRecipe={r=>setRec(p=>[...p,{...r,id:gid()}])} onOpenRecipes={()=>{setNav("recipes");setView("gallery");}}/>}
+      {/* Persistent batch toast */}
+      {batchVisible&&<BatchToast
+        items={batchItems} running={batchRunning} done={batchDone}
+        saved={batchSaved} total={batchItems.length}
+        finished={batchFinished} minimized={batchMinimized}
+        onMinimize={()=>setBatchMinimized(p=>!p)}
+        onClose={()=>setBatchVisible(false)}
+      />}
     </div>
   );
 }
@@ -264,11 +414,11 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd}){
 }
 
 /* ══ GALLERY ══ */
-function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onEdit}){
+function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onBatch,onBatchJSON,onEdit}){
   const[showImport,setShowImport]=useState(false);
   return(
     <div style={{maxWidth:1200,margin:"0 auto",padding:"48px 32px"}}>
-      {showImport&&<ImportModal onClose={()=>setShowImport(false)} onImport={r=>{onImport&&onImport(r);setShowImport(false);}} colls={colls}/>}
+      {showImport&&<ImportModal onClose={()=>setShowImport(false)} onImport={r=>{onImport&&onImport(r);setShowImport(false);}} onBatch={files=>{onBatch&&onBatch(files);setShowImport(false);}} onBatchJSON={recipes=>{onBatchJSON&&onBatchJSON(recipes);setShowImport(false);}} colls={colls}/>}
       <div style={{marginBottom:36}}>
         <p style={{fontFamily:FB,fontSize:11,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Archivo de Recetas</p>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:12}}>
@@ -548,7 +698,7 @@ function CosteoTab({recipe,country,setCountry,co,getP,setP}){
 const eStep=()=>({id:gid(),name:"",method:"",ingredients:[eIng()]});
 const eIng=()=>({id:gid(),name:"",quantity:"",unit:"g",yieldPct:100});
 /* ══ IMPORT MODAL ══ */
-function ImportModal({onClose,onImport,colls}){
+function ImportModal({onClose,onImport,onBatch,onBatchJSON,colls}){
   const[tab,setTab]=useState("file");
   const[loading,setLoading]=useState(false);
   const[preview,setPreview]=useState(null);
@@ -603,18 +753,35 @@ function ImportModal({onClose,onImport,colls}){
   // Single file import (with preview)
   const importFile=async(file)=>{
     setLoading(true);setError("");setPreview(null);
-    try{ const p=await extractOne(file); setPreview(normalize(p)); }
+    try{
+      // If JSON file, check if it's an array of recipes
+      if(file.name.endsWith(".json")){
+        const text=await file.text();
+        const data=JSON.parse(text);
+        if(Array.isArray(data)&&data.length>0){
+          // Bulk JSON import — send to App-level handler
+          onBatchJSON&&onBatchJSON(data);
+          setPreview({_multi:true,_count:data.length});
+          setLoading(false);return;
+        }
+        setPreview(normalize(data));
+        setLoading(false);return;
+      }
+      const p=await extractOne(file); setPreview(normalize(p));
+    }
     catch(e){ setError("Error: "+e.message); }
     setLoading(false);
   };
 
   // BATCH import
-  const startBatch=async()=>{
+  // startBatch now handled by App-level runBatch
+  const startBatch=()=>{
     if(batchFiles.length===0)return;
-    setBatchRunning(true);setBatchDone(0);setBatchSaved(0);setBatchFinished(false);
-    let saved=0;
-    const updated=[...batchFiles];
-    for(let i=0;i<updated.length;i++){
+    const files=batchFiles.map(f=>f.file);
+    onBatch&&onBatch(files);
+    setBatchFiles([]);setBatchFinished(true);
+    return;
+    if(false){
       updated[i]={...updated[i],status:"processing"};
       setBatchFiles([...updated]);
       try{
