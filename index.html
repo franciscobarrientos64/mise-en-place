@@ -539,6 +539,26 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
             <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:5,fontFamily:FB}}>Emplatado</p>
             <p style={{margin:0,fontSize:12,color:G.textMid,lineHeight:1.7,fontFamily:FB}}>{recipe.plating}</p>
           </div>}
+          {recipe.links?.length>0&&(
+            <div style={{border:`1px solid ${G.brd}`,borderRadius:8,padding:"12px 16px"}}>
+              <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,margin:"0 0 10px",fontFamily:FB}}>Links de referencia</p>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {recipe.links.map(lnk=>(
+                  <a key={lnk.id} href={lnk.url} target="_blank" rel="noopener noreferrer"
+                    style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:G.surf,borderRadius:6,textDecoration:"none",border:`1px solid ${G.brd}`,transition:"border-color .15s"}}
+                    onMouseOver={e=>e.currentTarget.style.borderColor=G.blue}
+                    onMouseOut={e=>e.currentTarget.style.borderColor=G.brd}>
+                    <span style={{fontSize:13}}>🔗</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <p style={{fontFamily:FB,fontSize:12,color:G.blue,margin:0,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lnk.label||lnk.url}</p>
+                      {lnk.label&&<p style={{fontFamily:FB,fontSize:10,color:G.textMut,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lnk.url}</p>}
+                    </div>
+                    <span style={{fontSize:10,color:G.textMut,flexShrink:0}}>↗</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <div style={{display:"flex",borderBottom:`1px solid ${G.brd}`,marginBottom:28}}>
@@ -1077,8 +1097,8 @@ function AddRecipe({onSave,onCancel,colls,initialRecipe}){
   const isEdit=!!initialRecipe;
   const fileRef=useRef();
   const[form,setForm]=useState(()=>isEdit
-    ?{...initialRecipe, steps:(initialRecipe.steps||[]).map(s=>({...s,id:s.id||gid(),ingredients:(s.ingredients||[]).map(i=>({...i,id:i.id||gid()}))}))}
-    :{name:"",category:CATEGORIES[0],portions:4,photo:null,cutlery:[],plating:"",steps:[eStep()],colls:[]});
+    ?{...initialRecipe, links:(initialRecipe.links||[]), steps:(initialRecipe.steps||[]).map(s=>({...s,id:s.id||gid(),ingredients:(s.ingredients||[]).map(i=>({...i,id:i.id||gid()}))}))}
+    :{name:"",category:CATEGORIES[0],portions:4,photo:null,cutlery:[],plating:"",steps:[eStep()],colls:[],links:[]});
   const[errors,setErrors]=useState({});
   const upd=(k,v)=>setForm(p=>({...p,[k]:v}));
   const handlePhoto=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>upd("photo",ev.target.result);r.readAsDataURL(f);};
@@ -1111,6 +1131,25 @@ function AddRecipe({onSave,onCancel,colls,initialRecipe}){
         <Label t="Emplatado"/>
         <textarea value={form.plating} onChange={e=>upd("plating",e.target.value)} rows={3} placeholder="Orden de elementos, temperatura del plato, decoración final…" style={inp({resize:"vertical",lineHeight:1.6})}/>
         {colls.length>0&&<><div style={{marginTop:14}}><Label t="Colecciones"/></div><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{colls.map(c=>{const s=form.colls.includes(c.id);return(<button key={c.id} onClick={()=>toggleColl(c.id)} style={{background:s?c.color+"15":"transparent",border:`1px solid ${s?c.color:G.brd}`,color:s?c.color:G.textMut,padding:"4px 11px",borderRadius:20,cursor:"pointer",fontFamily:FB,fontSize:10,fontWeight:600}}>{c.name}</button>);})}</div></>}
+      </SectionBox>
+      <SectionBox title="Links de referencia">
+        {(form.links||[]).map((lnk,i)=>(
+          <div key={lnk.id} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
+            <input value={lnk.label} onChange={e=>setForm(p=>({...p,links:p.links.map((l,j)=>j===i?{...l,label:e.target.value}:l)}))}
+              placeholder="Etiqueta (ej: Video TikTok)" style={inp({width:160,fontSize:12,padding:"7px 10px",flexShrink:0})}
+              onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+            <input value={lnk.url} onChange={e=>setForm(p=>({...p,links:p.links.map((l,j)=>j===i?{...l,url:e.target.value}:l)}))}
+              placeholder="https://…" style={inp({flex:1,fontSize:12,padding:"7px 10px"})}
+              onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+            <button onClick={()=>setForm(p=>({...p,links:p.links.filter((_,j)=>j!==i)}))}
+              style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontSize:20,padding:"0 4px",flexShrink:0,lineHeight:1}} title="Eliminar">×</button>
+          </div>
+        ))}
+        <button onClick={()=>setForm(p=>({...p,links:[...(p.links||[]),{id:gid(),label:"",url:""}]}))}
+          style={bv("ghost",{fontSize:11,padding:"6px 14px",borderRadius:6})}
+          onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
+          + Agregar link
+        </button>
       </SectionBox>
       <SectionBox title="Fotografía">
         <input type="file" accept="image/*" ref={fileRef} onChange={handlePhoto} style={{display:"none"}}/>
