@@ -34,6 +34,13 @@ const AI_URL = '/api/claude';
 const SB_URL = 'https://jmkvphayyhwzootlybde.supabase.co/rest/v1';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impta3ZwaGF5eWh3em9vdGx5YmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODE3ODEsImV4cCI6MjA5MzU1Nzc4MX0.EP2vv5avU1FIXlZn4jFo3QkvqnxOdLOrICqNV8qAZxM';
 const SB_H = () => ({ 'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json' });
+
+// ── Mobile detection hook ──
+const useMobile = () => {
+  const [w, setW] = useState(window.innerWidth);
+  useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);
+  return w < 768;
+};
 const sbLoad  = async()=>{ const r=await fetch(SB_URL+'/recipes?select=*&order=created_at.asc',{headers:SB_H()}); return r.ok?await r.json():[]; };
 const sbUpsert  = async(recipe)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipe)});
 const sbBatch   = async(recipes)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipes)});
@@ -258,6 +265,30 @@ function App(){
   });
   const[sbReady,setSbReady]=useState(false);
   const[sbSyncing,setSbSyncing]=useState(false);
+
+  // Refresh from Supabase when app comes back to foreground
+  useEffect(()=>{
+    const onVisible=()=>{
+      if(document.visibilityState==='visible'&&sbReady){
+        setSbSyncing(true);
+        sbLoad().then(rows=>{
+          if(rows.length>0){setRec(rows);try{localStorage.setItem('mep_recipes',JSON.stringify(rows));}catch(e){}}
+          setSbSyncing(false);
+        }).catch(()=>setSbSyncing(false));
+      }
+    };
+    document.addEventListener('visibilitychange',onVisible);
+    return()=>document.removeEventListener('visibilitychange',onVisible);
+  },[sbReady]);
+
+  const refreshFromCloud=()=>{
+    if(!sbReady)return;
+    setSbSyncing(true);
+    sbLoad().then(rows=>{
+      if(rows.length>0){setRec(rows);try{localStorage.setItem('mep_recipes',JSON.stringify(rows));}catch(e){}}
+      setSbSyncing(false);
+    }).catch(()=>setSbSyncing(false));
+  };
   useEffect(()=>{
     setSbSyncing(true);
     sbLoad().then(sbRows=>{
@@ -307,9 +338,9 @@ function App(){
   const filt=recipes.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())&&(!catF||r.category===catF));
   return(
     <div style={{fontFamily:FB,background:G.bg,minHeight:"100vh",color:G.text}}>
-      <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")} sbSyncing={sbSyncing} sbReady={sbReady}/>
+      <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")} sbSyncing={sbSyncing} sbReady={sbReady} onRefresh={refreshFromCloud}/>
       {nav==="recipes"&&<>
-        {view==="gallery"&&<Gallery recipes={filt} setRec={setRec} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);if(sbReady)sbUpsert(nr);}} onBatch={runBatch} onBatchJSON={runBatchJSON} onEdit={startEdit} onForceSync={()=>forceSyncAll(recipes)} sbSyncing={sbSyncing} sbReady={sbReady} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
+        {view==="gallery"&&<Gallery recipes={filt} setRec={setRec} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);if(sbReady)sbUpsert(nr);}} onBatch={runBatch} onBatchJSON={runBatchJSON} onEdit={startEdit} onForceSync={()=>forceSyncAll(recipes)} onRefresh={refreshFromCloud} sbSyncing={sbSyncing} sbReady={sbReady} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
         {view==="detail"&&sel&&<Detail recipe={sel} tab={tab} setTab={setTab} country={country} setCountry={setCtry} co={co} getP={getP} setP={setP} onDelete={()=>delR(sel.id)} colls={colls} onUpdate={updR} onEdit={()=>startEdit(sel.id)}/>}
         {view==="add"&&<AddRecipe onSave={saveR} onCancel={goBack} colls={colls}/>}
         {view==="edit"&&recipes.find(r=>r.id===editId)&&<AddRecipe initialRecipe={recipes.find(r=>r.id===editId)} onSave={saveEdit} onCancel={()=>setView("detail")} colls={colls}/>}
@@ -321,31 +352,24 @@ function App(){
 }
 
 /* ══ TOP BAR ══ */
-function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady}){
+function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady,onRefresh}){
+  const mob=useMobile();
+  const NAV=[["recipes","Recetas","🍽"],["organize","Colecciones","📁"],["lab","Laboratorio","🧪"]];
   return(
-    <header style={{background:G.w,borderBottom:`1px solid ${G.brd}`,padding:"0 32px",height:56,display:"flex",alignItems:"center",gap:20,position:"sticky",top:0,zIndex:100}}>
-      {nav==="recipes"&&view!=="gallery"&&
-        <button onClick={onBack} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontFamily:FB,fontSize:12,display:"flex",alignItems:"center",gap:4,padding:"4px 8px",borderRadius:4}}
-          onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=G.textMut}>
-          ← Volver
-        </button>}
-      <span style={{fontFamily:FH,fontSize:15,color:G.text,letterSpacing:4,fontWeight:700,flexShrink:0}}>
-        MISE EN PLACE
-      </span>
-      {recName&&<><span style={{color:G.brd,fontSize:14}}>·</span>
-        <span style={{fontFamily:FB,fontSize:12,color:G.textMut,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:220}}>{recName}</span></>}
+    <header style={{background:G.w,borderBottom:`1px solid ${G.brd}`,padding:mob?"0 16px":"0 32px",height:mob?52:56,display:"flex",alignItems:"center",gap:mob?8:16,position:"sticky",top:0,zIndex:50}}>
+      {nav==="recipes"&&view!=="gallery"
+        ?<button onClick={onBack} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontFamily:FB,fontSize:13,padding:"4px 0",flexShrink:0}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=G.textMut}>← Volver</button>
+        :<span style={{fontFamily:FH,fontSize:mob?12:15,color:G.text,letterSpacing:mob?2:4,fontWeight:700,flexShrink:0}}>MISE EN PLACE</span>}
+      {!mob&&recName&&<><span style={{color:G.brd,fontSize:14}}>·</span><span style={{fontFamily:FB,fontSize:12,color:G.textMut,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180}}>{recName}</span></>}
       <nav style={{display:"flex",gap:0,marginLeft:"auto",alignItems:"center"}}>
-        {[["recipes","Recetas"],["organize","Colecciones"],["lab","Laboratorio"]].map(([id,label])=>(
-          <button key={id} onClick={()=>setNav(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:500,padding:"8px 16px",color:nav===id?G.blue:G.textMid,borderBottom:nav===id?`2px solid ${G.blue}`:"2px solid transparent",transition:"all .18s"}}>
+        {NAV.map(([id,label,icon])=>(
+          <button key={id} onClick={()=>setNav(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:mob?10:12,color:nav===id?G.blue:G.textMut,fontWeight:nav===id?700:400,padding:mob?"0 10px":"0 14px",height:mob?52:56,borderBottom:nav===id?`2px solid ${G.blue}`:"2px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,transition:"color .15s"}}>
+            {mob&&<span style={{fontSize:16}}>{icon}</span>}
             {label}
           </button>
         ))}
-        {nav==="recipes"&&view==="gallery"&&
-          <button onClick={onAdd} style={{...bv("p",{padding:"7px 16px",fontSize:11,fontWeight:700,marginLeft:12,borderRadius:6,letterSpacing:.5})}}
-            onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
-            + Nueva Receta
-          </button>}
-
+        <button onClick={onRefresh} disabled={sbSyncing} title="Actualizar desde la nube" style={{background:"none",border:"none",cursor:sbSyncing?"wait":"pointer",color:sbSyncing?"#F59E0B":G.textMut,fontSize:18,padding:"0 8px",display:"flex",alignItems:"center",lineHeight:1}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=sbSyncing?"#F59E0B":G.textMut}>↻</button>
+        {!mob&&nav==="recipes"&&view==="gallery"&&<button onClick={onAdd} style={{...bv("p",{padding:"7px 16px",fontSize:11,fontWeight:700,marginLeft:4})}} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>+ Nueva Receta</button>}
       </nav>
     </header>
   );
@@ -355,7 +379,7 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady}){
 function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onBatch,onBatchJSON,onEdit,onForceSync,sbSyncing,sbReady}){
   const[showImport,setShowImport]=useState(false);
   return(
-    <div style={{maxWidth:1200,margin:"0 auto",padding:"48px 32px"}}>
+    <div style={{maxWidth:1200,margin:"0 auto",padding:useMobile()?"16px 12px":"48px 32px"}}>
       {showImport&&<ImportModal onClose={()=>setShowImport(false)} onImport={r=>{onImport&&onImport(r);setShowImport(false);}} colls={colls}/>}
       <div style={{marginBottom:36}}>
         <p style={{fontFamily:FB,fontSize:11,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Archivo de Recetas</p>
@@ -425,7 +449,7 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
             <p style={{fontFamily:FH,fontSize:22,color:G.text,margin:"0 0 8px",fontWeight:700}}>Sin resultados</p>
             <p style={{fontSize:12}}>Agrega tu primera receta con el botón superior derecho</p>
           </div>
-        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:20}}>
+        :<div style={{display:"grid",gridTemplateColumns:useMobile()?"repeat(2,1fr)":"repeat(auto-fill,minmax(240px,1fr))",gap:20}}>
             {recipes.map(r=><RecipeCard key={r.id} recipe={r} onOpen={()=>onOpen(r.id)} colls={colls}
               onEdit={()=>onEdit&&onEdit(r.id)}
               onExport={()=>{const cl={...r,photo:r.photo?"[foto]":null};const b=new Blob([JSON.stringify(cl,null,2)],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=r.name.replace(/\s+/g,"-").toLowerCase()+".json";a.click();URL.revokeObjectURL(u);}}
