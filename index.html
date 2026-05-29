@@ -484,86 +484,119 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd,syncing,synced,onRefresh})
 
 
 /* ══ GALLERY ══ */
-function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onEdit,onDelete}){
+
+const exportCombinedList=(recipes)=>{
+  const lines=['🛒 LISTA DE COMPRAS COMBINADA ('+recipes.length+' receta'+(recipes.length!==1?'s':'')+')\n'];
+  recipes.forEach(recipe=>{
+    lines.push('══ '+recipe.name.toUpperCase()+' ('+recipe.portions+' porciones) ══');
+    (recipe.steps||[]).forEach(step=>{
+      if(!step.ingredients||step.ingredients.length===0)return;
+      lines.push(step.name);
+      step.ingredients.forEach(ing=>{
+        const v=ing.unit==='al gusto'?'al gusto':(ing.quantity%1===0?ing.quantity:Math.round(ing.quantity*100)/100)+' '+ing.unit;
+        lines.push('□ '+ing.name+' · '+v);
+      });
+      lines.push('');
+    });
+  });
+  lines.push('— mise-en-place-smoky.vercel.app');
+  return lines.join('\n');
+};
+const shareCombinedList=(recipes)=>{
+  const text=exportCombinedList(recipes);
+  if(navigator.share){navigator.share({title:'Lista de compras combinada',text}).catch(()=>{});}
+  else{navigator.clipboard.writeText(text).then(()=>alert('✅ Lista copiada al portapapeles')).catch(()=>{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('✅ Lista copiada al portapapeles');});}
+};
+function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onEdit,onDelete,syncing,synced}){
+  const mob=useMobile();
   const[showImport,setShowImport]=useState(false);
+  const[sel,setSel]=useState(new Set());
+  const[selecting,setSelecting]=useState(false);
+  const toggleSel=id=>setSel(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
+  const exitSel=()=>{setSel(new Set());setSelecting(false);};
+  const selRecipes=recipes.filter(r=>sel.has(r.id));
   return(
-    <div style={{maxWidth:1200,margin:"0 auto",padding:useMobile()?"16px 12px":"48px 32px"}}>
+    <div style={{maxWidth:1200,margin:'0 auto',padding:mob?'16px 12px':'48px 32px',paddingBottom:sel.size>0?'100px':undefined}}>
       {showImport&&<ImportModal onClose={()=>setShowImport(false)} onImport={r=>{onImport&&onImport(r);setShowImport(false);}} colls={colls}/>}
-      <div style={{marginBottom:36}}>
-        <p style={{fontFamily:FB,fontSize:11,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Archivo de Recetas</p>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:12}}>
-          <h1 style={{fontFamily:FH,fontSize:38,color:G.text,fontWeight:700,letterSpacing:-.5}}>{total} receta{total!==1?"s":""} archivadas</h1>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            {/* Export ALL */}
-            <button onClick={()=>{
-              const blob=new Blob([JSON.stringify(recipes,null,2)],{type:"application/json"});
-              const url=URL.createObjectURL(blob);
-              const a=document.createElement("a");
-              a.href=url;a.download="mise-en-place-backup-"+new Date().toISOString().slice(0,10)+".json";
-              a.click();URL.revokeObjectURL(url);
-            }} style={bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5})} title="Exportar todas las recetas como JSON" onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
-              ⬆ Exportar todo
+      <div style={{marginBottom:28}}>
+        <p style={{fontFamily:FB,fontSize:11,letterSpacing:3,textTransform:'uppercase',color:G.blue,fontWeight:600,marginBottom:6}}>Archivo de Recetas</p>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',flexWrap:'wrap',gap:10}}>
+          <h1 style={{fontFamily:FH,fontSize:mob?26:38,color:G.text,fontWeight:700,letterSpacing:-.5}}>{total} receta{total!==1?'s':''} archivadas</h1>
+          <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+            <button onClick={()=>{setSelecting(p=>!p);setSel(new Set());}}
+              style={{...bv(selecting?'p':'ghost',{padding:'7px 14px',fontSize:11,borderRadius:6,display:'flex',alignItems:'center',gap:5})}}
+              onMouseOver={e=>{if(!selecting)e.currentTarget.style.background=G.surf;}}
+              onMouseOut={e=>{if(!selecting)e.currentTarget.style.background=G.w;}}>
+              {selecting?'✕ Cancelar selección':'☑ Seleccionar'}
             </button>
-            {/* Import ALL */}
-            <label style={{...bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5,cursor:"pointer"}),border:`1px solid ${G.brd}`}} title="Importar backup JSON completo" onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
-              ⬇ Importar todo
-              <input type="file" accept=".json" style={{display:"none"}} onChange={e=>{
-                const file=e.target.files[0]; if(!file)return;
-                const reader=new FileReader();
-                reader.onload=ev=>{
-                  try{
-                    const data=JSON.parse(ev.target.result);
-                    const arr=Array.isArray(data)?data:[data];
-                    if(arr.length===0)return alert("El archivo está vacío.");
-                    if(confirm(`¿Importar ${arr.length} recetas? Esto se sumará a tus ${recipes.length} recetas actuales.`)){
-                      const existing=new Set(recipes.map(r=>r.id));
-                      const newOnes=arr.filter(r=>!existing.has(r.id));
-                      const updated=arr.filter(r=>existing.has(r.id));
-                      setRec(p=>{
-                        const merged=p.map(r=>{const u=updated.find(x=>x.id===r.id);return u||r;});
-                        return [...merged,...newOnes];
-                      });
-                      alert(`✅ ${newOnes.length} recetas nuevas agregadas, ${updated.length} actualizadas.`);
-                    }
-                  }catch(err){alert("Error leyendo el archivo: "+err.message);}
-                };
-                reader.readAsText(file);
-                e.target.value="";
-              }}/>
-            </label>
-            <button onClick={()=>setShowImport(true)} style={bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>📥 Importar receta</button>
-          </div>
-          {/* Cloud sync status */}
-          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}>
-            <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:"#F0FDF4",border:"1px solid #6EE7B7"}}>
-              <span style={{fontSize:13}}>✅</span>
-              <span style={{fontFamily:FB,fontSize:11,fontWeight:600,color:"#065F46"}}>{total} receta{total!==1?"s":""} archivadas</span>
-            </div>
+            {!mob&&<button onClick={()=>setShowImport(true)} style={bv('ghost',{padding:'7px 14px',fontSize:11,borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>📥 Importar</button>}
           </div>
         </div>
       </div>
-      <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap"}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar receta…" style={inp({flex:1,minWidth:160})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
-        <select value={catF} onChange={e=>setCatF(e.target.value)} style={inp({width:"auto",cursor:"pointer"})}>
-          <option value="">Todas las categorías</option>
+      <div style={{display:'flex',gap:10,marginBottom:24,flexWrap:'wrap'}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder='Buscar receta…' style={inp({flex:1,minWidth:160})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+        <select value={catF} onChange={e=>setCatF(e.target.value)} style={inp({width:'auto',cursor:'pointer'})}>
+          <option value=''>Todas las categorías</option>
           {CATEGORIES.map(c=><option key={c}>{c}</option>)}
         </select>
       </div>
       {recipes.length===0
-        ?<div style={{textAlign:"center",padding:"80px 0",color:G.textMut}}>
-            <p style={{fontFamily:FH,fontSize:22,color:G.text,margin:"0 0 8px",fontWeight:700}}>Sin resultados</p>
-            <p style={{fontSize:12}}>Agrega tu primera receta con el botón superior derecho</p>
+        ?<div style={{textAlign:'center',padding:'80px 0',color:G.textMut}}>
+            <p style={{fontFamily:FH,fontSize:22,color:G.text,margin:'0 0 8px',fontWeight:700}}>Sin resultados</p>
+            <p style={{fontSize:12}}>Agrega tu primera receta</p>
           </div>
-        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:20}}>
-            {recipes.map(r=><RecipeCard key={r.id} recipe={r} onOpen={()=>onOpen(r.id)} colls={colls}
-              onDelete={()=>onDelete&&onDelete(r.id)} onEdit={()=>onEdit&&onEdit(r.id)}
-              onExport={()=>{const cl={...r,photo:r.photo?"[foto]":null};const b=new Blob([JSON.stringify(cl,null,2)],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=r.name.replace(/\s+/g,"-").toLowerCase()+".json";a.click();URL.revokeObjectURL(u);}}
-            />)}
+        :<div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:16}}>
+            {recipes.map(r=>(
+              <div key={r.id} style={{position:'relative'}}>
+                {selecting&&(
+                  <div onClick={()=>toggleSel(r.id)}
+                    style={{position:'absolute',top:10,left:10,zIndex:30,width:26,height:26,borderRadius:13,
+                      background:sel.has(r.id)?G.blue:'rgba(255,255,255,.9)',
+                      border:`2px solid ${sel.has(r.id)?G.blue:G.brd}`,
+                      display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',
+                      boxShadow:'0 2px 8px rgba(0,0,0,.15)',transition:'all .15s'}}>
+                    {sel.has(r.id)&&<span style={{color:'#fff',fontSize:14,lineHeight:1}}>✓</span>}
+                  </div>
+                )}
+                <div style={{outline:selecting&&sel.has(r.id)?`2px solid ${G.blue}`:'none',borderRadius:12,transition:'outline .15s'}}>
+                  <RecipeCard recipe={r} onOpen={()=>{if(selecting)toggleSel(r.id);else onOpen(r.id);}} colls={colls}
+                    onDelete={()=>onDelete&&onDelete(r.id)}
+                    onEdit={()=>onEdit&&onEdit(r.id)}
+                    onExport={()=>{const cl={...r,photo:r.photo?'[foto]':null};const b=new Blob([JSON.stringify(cl,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=r.name.replace(/\s+/g,'-').toLowerCase()+'.json';a.click();URL.revokeObjectURL(u);}}
+                  />
+                </div>
+              </div>
+            ))}
           </div>}
+      {/* ── FLOATING ACTION BAR ── */}
+      {sel.size>0&&(
+        <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:200,
+          background:G.w,borderTop:`1px solid ${G.brd}`,
+          padding:mob?'12px 16px':'14px 32px',
+          display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,
+          boxShadow:'0 -4px 24px rgba(0,0,0,.10)'}}>
+          <span style={{fontFamily:FB,fontSize:13,fontWeight:600,color:G.text}}>
+            {sel.size} receta{sel.size!==1?'s':''} seleccionada{sel.size!==1?'s':''}
+          </span>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={()=>shareCombinedList(selRecipes)}
+              style={{...bv('p',{padding:mob?'9px 14px':'10px 20px',fontSize:12,fontWeight:700,borderRadius:8,display:'flex',alignItems:'center',gap:6})}}
+              onMouseOver={e=>e.currentTarget.style.background=G.blueHov}
+              onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+              🛒 Lista combinada
+            </button>
+            <button onClick={exitSel}
+              style={{...bv('ghost',{padding:mob?'9px 12px':'10px 16px',fontSize:12,borderRadius:8})}}
+              onMouseOver={e=>e.currentTarget.style.background=G.surf}
+              onMouseOut={e=>e.currentTarget.style.background=G.w}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
 function RecipeCard({recipe,onOpen,colls,onEdit,onExport,onDelete}){
   const[hov,setHov]=useState(false);
   const[menu,setMenu]=useState(false);
