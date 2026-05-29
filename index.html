@@ -685,7 +685,10 @@ function ImportModal({onClose,onImport,colls}){
       if(!res.ok)throw new Error(data?.error?.message||"Error API");
       const raw=(data.content||[]).filter(x=>x.type==="text").map(x=>x.text).join("").replace(/```json\n?|```\n?/g,"").trim();
       const m=raw.match(/\{[\s\S]*\}/);
-      setPreview(normalize(JSON.parse(m?m[0]:raw)));
+      const parsed=JSON.parse(m?m[0]:raw);
+      const nr=normalize(parsed);
+      nr.links=[{id:gid(),label:"Fuente original",url:urlVal.trim()},...(nr.links||[])];
+      setPreview(nr);
     }catch(e){setError("Error: "+e.message);}
     setLoading(false);
   };
