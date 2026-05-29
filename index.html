@@ -510,7 +510,7 @@ Si no hay cantidad específica usa 1. Unidades válidas: g, kg, ml, l, tsp, tbsp
 
   return(
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      {recipe.steps.map((step,idx)=>(
+      {(recipe.steps||[]).map((step,idx)=>(
         <div key={step.id} style={{border:`1px solid ${G.brd}`,borderRadius:10,overflow:"hidden"}}>
           {/* Step header */}
           <div style={{background:G.surf,borderBottom:`1px solid ${G.brd}`,padding:"12px 20px",display:"flex",alignItems:"center",gap:12}}>
@@ -529,7 +529,7 @@ Si no hay cantidad específica usa 1. Unidades válidas: g, kg, ml, l, tsp, tbsp
             {/* Ingredients */}
             <div style={{flex:"0 0 280px",minWidth:180}}>
               <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:10,fontFamily:FB}}>Ingredientes</p>
-              {step.ingredients.length===0&&onUpdate
+              {(step.ingredients?.length??0)===0&&onUpdate
                 ?<button onClick={()=>extractIngredients(step)} disabled={extracting[step.id]}
                     style={{...bv("p",{padding:"8px 14px",fontSize:11,borderRadius:6,width:"100%",opacity:extracting[step.id]?.6:1}),display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:4}}
                     onMouseOver={e=>{if(!extracting[step.id])e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
@@ -539,7 +539,7 @@ Si no hay cantidad específica usa 1. Unidades válidas: g, kg, ml, l, tsp, tbsp
                   <thead><tr style={{borderBottom:`1px solid ${G.brd}`}}>
                     {["Ingrediente","Cant.","Unid.","Rend."].map(h=><th key={h} style={{textAlign:"left",padding:"4px 5px",fontSize:9,color:G.textMut,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",fontFamily:FB}}>{h}</th>)}
                   </tr></thead>
-                  <tbody>{step.ingredients.map(i=>(
+                  <tbody>{(step.ingredients||[]).map(i=>(
                     <tr key={i.id} style={{borderBottom:`1px solid ${G.brd}`}}>
                       <td style={{padding:"6px 5px",fontSize:12,color:G.text,fontFamily:FB}}>{i.name}</td>
                       <td style={{padding:"6px 5px",fontSize:12,color:G.textMid,textAlign:"right",fontFamily:FB}}>{fmtN(i.quantity,2)}</td>
@@ -659,9 +659,9 @@ function ImportModal({onClose,onImport,colls}){
   const EXTRACT_PROMPT=`Extrae la receta completa. Responde SOLO con JSON válido (sin texto extra):
 {"name":"Nombre","category":"Categoría","portions":4,"plating":"Emplatado","cutlery":["fork_knife"],"steps":[{"name":"Paso","method":"Metodología","ingredients":[{"name":"Ingrediente","quantity":200,"unit":"g","yieldPct":90}]}]}`;
 
-  const normalize=p=>({...p,id:gid(),photo:null,colls:[],
-    steps:(p.steps||[]).map(s=>({...s,id:gid(),
-      ingredients:(s.ingredients||[]).map(i=>({...i,id:gid()}))}))});
+  const normalize=p=>({...p,id:gid(),photo:null,colls:p.colls||[],links:p.links||[],
+    steps:(p.steps||[]).map(s=>({...s,id:s.id||gid(),method:s.method||"",notes:s.notes||"",
+      ingredients:(s.ingredients||[]).map(i=>({...i,id:i.id||gid()}))}))});
 
   const toBase64=file=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
   const toText=file=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(file);});
