@@ -604,17 +604,23 @@ function ImportModal({onClose,onImport,colls}){
   const toText=file=>new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(file);});
 
   const extractOne=async(file)=>{
-    const isPDF=file.type==="application/pdf";
-    const isImg=file.type.startsWith("image/");
+    const ext=file.name.split(".").pop().toLowerCase();
+    const imgExts=["jpg","jpeg","png","webp","gif","bmp","tiff","avif"];
+    const isPDF=file.type==="application/pdf"||ext==="pdf";
+    const isImg=file.type.startsWith("image/")||imgExts.includes(ext);
+    const isHEIC=ext==="heic"||ext==="heif";
     const isExcel=file.name.match(/\.xlsx?$|\.csv$/i);
     const isWord=file.name.match(/\.docx?$/i);
     let messages;
     if(isPDF){
       const b64=await toBase64(file);
       messages=[{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},{type:"text",text:EXTRACT_PROMPT}]}];
+    } else if(isHEIC){
+      throw new Error("Formato HEIC no soportado. Convierte la foto a JPG o PNG (iPhone: Ajustes → Cámara → Formatos → Más compatible).");
     } else if(isImg){
+      const mimeType=file.type.startsWith("image/")?file.type:`image/${ext==="jpg"?"jpeg":ext}`;
       const b64=await toBase64(file);
-      messages=[{role:"user",content:[{type:"image",source:{type:"base64",media_type:file.type,data:b64}},{type:"text",text:EXTRACT_PROMPT}]}];
+      messages=[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mimeType,data:b64}},{type:"text",text:EXTRACT_PROMPT}]}];
     } else {
       const text=await toText(file);
       messages=[{role:"user",content:EXTRACT_PROMPT+"\n\nContenido:\n"+text.slice(0,8000)}];
