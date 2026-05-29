@@ -2,7 +2,12 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Mise en Place"/>
+<meta name="theme-color" content="#ffffff"/>
+<link rel="apple-touch-icon" href="https://favi.deno.dev/🍽.png"/>
 <title>Mise en Place</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -348,19 +353,38 @@ function App(){
   const[search,setSearch]=useState("");
   const[catF,setCatF]=useState("");
   const[editId,setEditId]=useState(null);
-  useEffect(()=>{
-    setSyncing(true);
+
+  /* ── SYNC from Supabase ── */
+  const syncFromCloud=useCallback(()=>{
+    setSyncing(true);setSynced(false);
     sbLoad().then(sbRows=>{
       const hidden=new Set(JSON.parse(localStorage.getItem('mep_hidden')||'[]'));
       const userSb=sbRows.filter(r=>!demoIds.has(r.id));
       const sbIds=new Set(sbRows.map(r=>r.id));
-      JSON.parse(localStorage.getItem('mep_user')||'[]').filter(r=>!demoIds.has(r.id)&&!sbIds.has(r.id)).forEach(r=>sbUpsert(r));
+      JSON.parse(localStorage.getItem('mep_user')||'[]')
+        .filter(r=>!demoIds.has(r.id)&&!sbIds.has(r.id))
+        .forEach(r=>sbUpsert(r));
       setRec([...DEMO_R.filter(r=>!hidden.has(r.id)),...userSb]);
       try{localStorage.setItem('mep_user',JSON.stringify(userSb));}catch(e){}
       setSyncing(false);setSynced(true);
     }).catch(()=>{setSyncing(false);setSynced(false);});
   },[]);
-  useEffect(()=>{try{localStorage.setItem('mep_user',JSON.stringify(recipes.filter(r=>!demoIds.has(r.id))));}catch(e){}},[recipes]);
+
+  /* ── Sync on mount ── */
+  useEffect(()=>{syncFromCloud();},[]);
+
+  /* ── Sync when app comes to foreground (PWA / add to home) ── */
+  useEffect(()=>{
+    const onVisible=()=>{if(document.visibilityState==='visible')syncFromCloud();};
+    document.addEventListener('visibilitychange',onVisible);
+    return()=>document.removeEventListener('visibilitychange',onVisible);
+  },[syncFromCloud]);
+
+  /* ── Persist user recipes locally ── */
+  useEffect(()=>{
+    try{localStorage.setItem('mep_user',JSON.stringify(recipes.filter(r=>!demoIds.has(r.id))));}catch(e){}
+  },[recipes]);
+
   const sel=recipes.find(r=>r.id===selId);
   const co=COUNTRIES.find(c=>c.code===country)||COUNTRIES[0];
   const filt=recipes.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())&&(!catF||r.category===catF));
@@ -381,7 +405,7 @@ function App(){
   const setP=(k,v)=>setPrices(p=>({...p,[selId]:{...p[selId],[country]:{...p[selId]?.[country],[k]:v}}}));
   return(
     <div style={{fontFamily:FB,background:G.bg,minHeight:"100vh",color:G.text}}>
-      <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")} syncing={syncing} synced={synced}/>
+      <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")} syncing={syncing} synced={synced} onRefresh={syncFromCloud}/>
       {nav==="recipes"&&<>
         {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onImport={importR} onEdit={startEdit} onDelete={delR} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls} syncing={syncing} synced={synced}/>}
         {view==="detail"&&sel&&<Detail recipe={sel} tab={tab} setTab={setTab} country={country} setCountry={setCtry} co={co} getP={getP} setP={setP} onDelete={()=>delR(sel.id)} colls={colls} onUpdate={updR} onEdit={()=>startEdit(sel.id)}/>}
@@ -394,28 +418,34 @@ function App(){
   );
 }
 
-function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady,onRefresh}){
+function TopBar({nav,setNav,view,onBack,recName,onAdd,syncing,synced,onRefresh}){
   const mob=useMobile();
   const NAV=[["recipes","Recetas","🍽"],["organize","Colecciones","📁"],["lab","Laboratorio","🧪"]];
+  const cloudIcon=syncing?"☁️":synced?"✅":"💾";
+  const cloudColor=syncing?"#D97706":synced?"#059669":"#6B7280";
+  const cloudTip=syncing?"Sincronizando…":synced?"Sincronizado":"Sin conexión a nube";
   return(
-    <header style={{background:G.w,borderBottom:`1px solid ${G.brd}`,padding:mob?"0 16px":"0 32px",height:mob?52:56,display:"flex",alignItems:"center",gap:mob?8:16,position:"sticky",top:0,zIndex:50}}>
+    <header style={{background:G.w,borderBottom:`1px solid ${G.brd}`,padding:mob?"0 12px":"0 32px",height:mob?52:56,display:"flex",alignItems:"center",gap:mob?6:16,position:"sticky",top:0,zIndex:50}}>
       {nav==="recipes"&&view!=="gallery"
         ?<button onClick={onBack} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontFamily:FB,fontSize:13,padding:"4px 0",flexShrink:0}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=G.textMut}>← Volver</button>
-        :<span style={{fontFamily:FH,fontSize:mob?12:15,color:G.text,letterSpacing:mob?2:4,fontWeight:700,flexShrink:0}}>MISE EN PLACE</span>}
+        :<span style={{fontFamily:FH,fontSize:mob?11:15,color:G.text,letterSpacing:mob?2:4,fontWeight:700,flexShrink:0}}>MISE EN PLACE</span>}
       {!mob&&recName&&<><span style={{color:G.brd,fontSize:14}}>·</span><span style={{fontFamily:FB,fontSize:12,color:G.textMut,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180}}>{recName}</span></>}
       <nav style={{display:"flex",gap:0,marginLeft:"auto",alignItems:"center"}}>
         {NAV.map(([id,label,icon])=>(
-          <button key={id} onClick={()=>setNav(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:mob?10:12,color:nav===id?G.blue:G.textMut,fontWeight:nav===id?700:400,padding:mob?"0 10px":"0 14px",height:mob?52:56,borderBottom:nav===id?`2px solid ${G.blue}`:"2px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,transition:"color .15s"}}>
-            {mob&&<span style={{fontSize:16}}>{icon}</span>}
+          <button key={id} onClick={()=>setNav(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:mob?9:12,color:nav===id?G.blue:G.textMut,fontWeight:nav===id?700:400,padding:mob?"0 8px":"0 14px",height:mob?52:56,borderBottom:nav===id?`2px solid ${G.blue}`:"2px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,transition:"color .15s",flexShrink:0}}>
+            {mob&&<span style={{fontSize:15}}>{icon}</span>}
             {label}
           </button>
         ))}
-        <button onClick={onRefresh||refreshFromCloud} disabled={sbSyncing} title="Actualizar desde la nube" style={{background:"none",border:"none",cursor:sbSyncing?"wait":"pointer",color:sbSyncing?"#F59E0B":G.textMut,fontSize:18,padding:"0 8px",display:"flex",alignItems:"center",lineHeight:1}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=sbSyncing?"#F59E0B":G.textMut}>↻</button>
+        <button onClick={onRefresh} disabled={syncing} title={cloudTip} style={{background:"none",border:"none",cursor:syncing?"wait":"pointer",fontSize:mob?15:17,padding:mob?"0 6px":"0 10px",display:"flex",alignItems:"center",color:cloudColor,flexShrink:0,transition:"opacity .2s",opacity:syncing?0.7:1}}>
+          {cloudIcon}
+        </button>
         {!mob&&nav==="recipes"&&view==="gallery"&&<button onClick={onAdd} style={{...bv("p",{padding:"7px 16px",fontSize:11,fontWeight:700,marginLeft:4})}} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>+ Nueva Receta</button>}
       </nav>
     </header>
   );
 }
+
 
 /* ══ GALLERY ══ */
 function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onEdit,onDelete}){
