@@ -309,7 +309,7 @@ function App(){
     <div style={{fontFamily:FB,background:G.bg,minHeight:"100vh",color:G.text}}>
       <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")} sbSyncing={sbSyncing} sbReady={sbReady}/>
       {nav==="recipes"&&<>
-        {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);if(sbReady)sbUpsert(nr);}} onEdit={startEdit} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
+        {view==="gallery"&&<Gallery recipes={filt} setRec={setRec} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);if(sbReady)sbUpsert(nr);}} onBatch={runBatch} onBatchJSON={runBatchJSON} onEdit={startEdit} onForceSync={()=>forceSyncAll(recipes)} sbSyncing={sbSyncing} sbReady={sbReady} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
         {view==="detail"&&sel&&<Detail recipe={sel} tab={tab} setTab={setTab} country={country} setCountry={setCtry} co={co} getP={getP} setP={setP} onDelete={()=>delR(sel.id)} colls={colls} onUpdate={updR} onEdit={()=>startEdit(sel.id)}/>}
         {view==="add"&&<AddRecipe onSave={saveR} onCancel={goBack} colls={colls}/>}
         {view==="edit"&&recipes.find(r=>r.id===editId)&&<AddRecipe initialRecipe={recipes.find(r=>r.id===editId)} onSave={saveEdit} onCancel={()=>setView("detail")} colls={colls}/>}
@@ -352,7 +352,7 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady}){
 }
 
 /* ══ GALLERY ══ */
-function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onEdit}){
+function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onBatch,onBatchJSON,onEdit,onForceSync,sbSyncing,sbReady}){
   const[showImport,setShowImport]=useState(false);
   return(
     <div style={{maxWidth:1200,margin:"0 auto",padding:"48px 32px"}}>
