@@ -476,9 +476,7 @@ Responde SOLO con este JSON válido (array):
 Si no hay cantidad específica usa 1. Unidades válidas: g, kg, ml, l, tsp, tbsp, cup, oz, lb, unid, al gusto.`}]})});
       const data=await res.json();
       if(!res.ok)throw new Error(data?.error?.message||"Error API");
-      const raw=(data.content?.[0]?.text||"").replace(/```json
-?|```
-?/g,"").trim();
+      const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
       const m=raw.match(/\[[\s\S]*\]/);
       const ings=JSON.parse(m?m[0]:raw);
       const updated={...recipe,steps:recipe.steps.map(s=>s.id!==step.id?s:
