@@ -30,6 +30,14 @@ const { useState, useRef, useEffect, useCallback } = React;
 const AHEADERS = () => ({ 'Content-Type': 'application/json' });
 const AI_URL = '/api/claude';
 
+// ── Supabase ──
+const SB_URL = 'https://jmkvphayyhwzootlybde.supabase.co/rest/v1';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impta3ZwaGF5eWh3em9vdGx5YmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODE3ODEsImV4cCI6MjA5MzU1Nzc4MX0.EP2vv5avU1FIXlZn4jFo3QkvqnxOdLOrICqNV8qAZxM';
+const SB_H = () => ({ 'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json' });
+const sbLoad  = async()=>{ const r=await fetch(SB_URL+'/recipes?select=*&order=created_at.asc',{headers:SB_H()}); return r.ok?await r.json():[]; };
+const sbUpsert= async(recipe)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipe)});
+const sbDelete= async(id)=>fetch(SB_URL+'/recipes?id=eq.'+id,{method:'DELETE',headers:SB_H()});
+
 /* ══ TOKENS ══ */
 const G = {
   bg:"#FFFFFF", surf:"#F7F9FC", card:"#FFFFFF", cardH:"#F4F7FF",
@@ -247,6 +255,16 @@ function App(){
     try{const s=localStorage.getItem('mep_recipes');if(s){const p=JSON.parse(s);if(p.length>0)return p;}}catch(e){}
     return DEMO_R;
   });
+  const[sbReady,setSbReady]=useState(false);
+  const[sbSyncing,setSbSyncing]=useState(false);
+  useEffect(()=>{
+    setSbSyncing(true);
+    sbLoad().then(rows=>{
+      if(rows.length>0){setRec(rows);try{localStorage.setItem('mep_recipes',JSON.stringify(rows));}catch(e){}}
+      else{try{const local=JSON.parse(localStorage.getItem('mep_recipes')||'[]');const toMig=local.filter(r=>!DEMO_R.find(d=>d.id===r.id));if(toMig.length>0)toMig.forEach(r=>sbUpsert(r));}catch(e){}}
+      setSbReady(true);setSbSyncing(false);
+    }).catch(()=>{setSbReady(false);setSbSyncing(false);});
+  },[]);
   useEffect(()=>{try{localStorage.setItem('mep_recipes',JSON.stringify(recipes));}catch(e){}},[recipes]);
   const[colls,setColls]=useState(DEMO_C);
   const[selId,setSelId]=useState(null);
@@ -260,19 +278,19 @@ function App(){
   const[editId,setEditId]=useState(null);
   const openR=id=>{setSelId(id);setView("detail");setTab("recipe");setNav("recipes");};
   const goBack=()=>{setView("gallery");setSelId(null);setEditId(null);};
-  const saveR=r=>{setRec(p=>[...p,{...r,id:gid()}]);goBack();};
-  const updR=r=>setRec(p=>p.map(x=>x.id===r.id?r:x));
-  const delR=id=>{setRec(p=>p.filter(r=>r.id!==id));goBack();};
+  const saveR=r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);goBack();if(sbReady)sbUpsert(nr);};
+  const updR=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));if(sbReady)sbUpsert(r);};
+  const delR=id=>{setRec(p=>p.filter(r=>r.id!==id));goBack();if(sbReady)sbDelete(id);};
   const startEdit=id=>{setEditId(id);setSelId(id);setView("edit");};
-  const saveEdit=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));setView("detail");setEditId(null);};
+  const saveEdit=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));setView("detail");setEditId(null);if(sbReady)sbUpsert(r);};
   const getP=k=>prices[selId]?.[country]?.[k]??"";
   const setP=(k,v)=>setPrices(p=>({...p,[selId]:{...p[selId],[country]:{...p[selId]?.[country],[k]:v}}}));
   const filt=recipes.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())&&(!catF||r.category===catF));
   return(
     <div style={{fontFamily:FB,background:G.bg,minHeight:"100vh",color:G.text}}>
-      <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")}/>
+      <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")} sbSyncing={sbSyncing} sbReady={sbReady}/>
       {nav==="recipes"&&<>
-        {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{setRec(p=>[...p,{...r,id:gid()}]);}} onEdit={startEdit} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
+        {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);if(sbReady)sbUpsert(nr);}} onEdit={startEdit} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
         {view==="detail"&&sel&&<Detail recipe={sel} tab={tab} setTab={setTab} country={country} setCountry={setCtry} co={co} getP={getP} setP={setP} onDelete={()=>delR(sel.id)} colls={colls} onUpdate={updR} onEdit={()=>startEdit(sel.id)}/>}
         {view==="add"&&<AddRecipe onSave={saveR} onCancel={goBack} colls={colls}/>}
         {view==="edit"&&recipes.find(r=>r.id===editId)&&<AddRecipe initialRecipe={recipes.find(r=>r.id===editId)} onSave={saveEdit} onCancel={()=>setView("detail")} colls={colls}/>}
@@ -284,7 +302,7 @@ function App(){
 }
 
 /* ══ TOP BAR ══ */
-function TopBar({nav,setNav,view,onBack,recName,onAdd}){
+function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady}){
   return(
     <header style={{background:G.w,borderBottom:`1px solid ${G.brd}`,padding:"0 32px",height:56,display:"flex",alignItems:"center",gap:20,position:"sticky",top:0,zIndex:100}}>
       {nav==="recipes"&&view!=="gallery"&&
@@ -308,6 +326,11 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd}){
             onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
             + Nueva Receta
           </button>}
+          {/* Sync status */}
+          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontFamily:FB,color:sbSyncing?"#F59E0B":sbReady?"#10B981":"#9CA3AF"}} title={sbSyncing?"Sincronizando…":sbReady?"Guardado en la nube":"Sin conexión a nube"}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:sbSyncing?"#F59E0B":sbReady?"#10B981":"#9CA3AF",animation:sbSyncing?"pulse 1s infinite":"none"}}/>
+            {sbSyncing?"Sincronizando":sbReady?"Nube ✓":"Local"}
+          </div>
       </nav>
     </header>
   );
