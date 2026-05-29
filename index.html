@@ -323,7 +323,46 @@ function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImp
         <p style={{fontFamily:FB,fontSize:11,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Archivo de Recetas</p>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:12}}>
           <h1 style={{fontFamily:FH,fontSize:38,color:G.text,fontWeight:700,letterSpacing:-.5}}>{total} receta{total!==1?"s":""} archivadas</h1>
-          <button onClick={()=>setShowImport(true)} style={bv("ghost",{padding:"8px 16px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>📥 Importar receta</button>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            {/* Export ALL */}
+            <button onClick={()=>{
+              const blob=new Blob([JSON.stringify(recipes,null,2)],{type:"application/json"});
+              const url=URL.createObjectURL(blob);
+              const a=document.createElement("a");
+              a.href=url;a.download="mise-en-place-backup-"+new Date().toISOString().slice(0,10)+".json";
+              a.click();URL.revokeObjectURL(url);
+            }} style={bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5})} title="Exportar todas las recetas como JSON" onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
+              ⬆ Exportar todo
+            </button>
+            {/* Import ALL */}
+            <label style={{...bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5,cursor:"pointer"}),border:`1px solid ${G.brd}`}} title="Importar backup JSON completo" onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
+              ⬇ Importar todo
+              <input type="file" accept=".json" style={{display:"none"}} onChange={e=>{
+                const file=e.target.files[0]; if(!file)return;
+                const reader=new FileReader();
+                reader.onload=ev=>{
+                  try{
+                    const data=JSON.parse(ev.target.result);
+                    const arr=Array.isArray(data)?data:[data];
+                    if(arr.length===0)return alert("El archivo está vacío.");
+                    if(confirm(`¿Importar ${arr.length} recetas? Esto se sumará a tus ${recipes.length} recetas actuales.`)){
+                      const existing=new Set(recipes.map(r=>r.id));
+                      const newOnes=arr.filter(r=>!existing.has(r.id));
+                      const updated=arr.filter(r=>existing.has(r.id));
+                      setRec(p=>{
+                        const merged=p.map(r=>{const u=updated.find(x=>x.id===r.id);return u||r;});
+                        return [...merged,...newOnes];
+                      });
+                      alert(`✅ ${newOnes.length} recetas nuevas agregadas, ${updated.length} actualizadas.`);
+                    }
+                  }catch(err){alert("Error leyendo el archivo: "+err.message);}
+                };
+                reader.readAsText(file);
+                e.target.value="";
+              }}/>
+            </label>
+            <button onClick={()=>setShowImport(true)} style={bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>📥 Importar receta</button>
+          </div>
         </div>
       </div>
       <div style={{display:"flex",gap:10,marginBottom:28,flexWrap:"wrap"}}>
