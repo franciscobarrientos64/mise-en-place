@@ -196,25 +196,6 @@ plating:"Molde cilíndrico individual desmoldado sobre plato frío. Capa visible
   {id:"s11",name:"Crema Posset",method:"Crema + azúcar a fuego medio hasta disolver. Llevar a hervor suave 4-5 min.",ingredients:[{id:"i39",name:"Crema de leche",quantity:475,unit:"ml",yieldPct:100},{id:"i40",name:"Azúcar",quantity:150,unit:"g",yieldPct:100}]},
   {id:"s12",name:"Incorporar Limón",method:"Apagar fuego. Agregar jugo de limón. Enfriar a temperatura ambiente. Colar con malla fina.",ingredients:[{id:"i41",name:"Jugo de limón",quantity:75,unit:"ml",yieldPct:75}]},
   {id:"s13",name:"Moldear y Brûlée",method:"Vaciar limones. Llenar con crema. Refrigerar 3h mínimo. Brûlée con azúcar y soplete antes de servir.",ingredients:[{id:"i42",name:"Limones",quantity:3,unit:"unid",yieldPct:100},{id:"i43",name:"Azúcar brûlée",quantity:10,unit:"g",yieldPct:100}]}
-,
-{id:"r5",name:"Causa de Pulpo al Olivo",category:"Entradas",portions:4,photo:null,cutlery:["fork_knife"],colls:[],
-plating:"Causa desmoldada en plato frío. Estructura de capas visibles al corte: base y tapa de masa amarilla, relleno de pulpo al olivo. Cubierta con láminas de palta, medias lunas de huevo duro y tiras de pimiento rojo asado. Hilo de aceite de oliva como acabado.",steps:[
-  {id:"s14",name:"Masa de Causa",method:"Sancochar la papa amarilla con cáscara en agua con sal hasta cocida pero firme — no sobre cocinar o la masa quedará aguada. Pelar en caliente y pasar por prensa o ricer de inmediato. Dejar entibiar. Añadir la pasta de ají amarillo, el jugo de limón y el aceite vegetal. Mezclar y amasar hasta obtener masa homogénea, suave y no pegajosa. Rectificar sal. Cubrir con film en contacto y reservar a temperatura ambiente.",ingredients:[
-    {id:"i44",name:"Papa amarilla",quantity:600,unit:"g",yieldPct:85},
-    {id:"i45",name:"Pasta de ají amarillo",quantity:45,unit:"ml",yieldPct:100},
-    {id:"i46",name:"Jugo de limón",quantity:45,unit:"ml",yieldPct:75},
-    {id:"i47",name:"Aceite vegetal",quantity:30,unit:"ml",yieldPct:100},
-    {id:"i48",name:"Sal",quantity:1,unit:"al gusto",yieldPct:100}]},
-  {id:"s15",name:"Relleno de Pulpo al Olivo",method:"Cortar el pulpo cocido en daditos uniformes de ~1 cm. Mezclar con la mayonesa al olivo hasta cubrir bien sin enmascarar el pulpo. Rectificar sazón. Mantener refrigerado hasta el armado. [Ref: pulpo suavecito + mayonesa al olivo — preparaciones previas]",ingredients:[
-    {id:"i49",name:"Pulpo cocido (en daditos)",quantity:300,unit:"g",yieldPct:100},
-    {id:"i50",name:"Mayonesa al olivo",quantity:240,unit:"ml",yieldPct:100}]},
-  {id:"s16",name:"Pimientos Asados",method:"Asar los pimientos directamente sobre llama o en horno a 220°C hasta que la piel se queme y ampulle por todos lados. Transferir a bowl tapado con film por 10 min para que el vapor facilite el pelado. Pelar, retirar semillas y venas. Cortar en tiras. Sazonar con sal y aceite de oliva. Reservar.",ingredients:[
-    {id:"i51",name:"Pimientos rojos",quantity:200,unit:"g",yieldPct:75},
-    {id:"i52",name:"Aceite de oliva",quantity:15,unit:"ml",yieldPct:100},
-    {id:"i53",name:"Sal",quantity:1,unit:"al gusto",yieldPct:100}]},
-  {id:"s17",name:"Armado",method:"Dividir la masa de causa en dos partes iguales. Forrar la base del molde o aro con la primera mitad de masa, presionando uniformemente hasta 1.5 cm de grosor. Distribuir el relleno de pulpo al olivo encima en capa pareja. Cubrir con rodajas finas de palta. Colocar el huevo duro en láminas. Disponer las tiras de pimiento asado. Cubrir con la segunda mitad de masa, presionar suavemente y emparejar la superficie. Refrigerar 30 min antes de desmoldar y servir.",ingredients:[
-    {id:"i54",name:"Palta",quantity:1,unit:"unid",yieldPct:75},
-    {id:"i55",name:"Huevo duro",quantity:2,unit:"unid",yieldPct:100}]}
 ]}
 ];
 const DEMO_C=[{id:"c1",name:"Firma",color:COLL_COLORS[0]},{id:"c2",name:"Menú Degustación",color:COLL_COLORS[1]}];
@@ -1642,7 +1623,12 @@ const QUICK_FILTERS=[
   {group:"Para quién",items:["Para niños","Para bebés (6m+)","Para adultos","Para una cita","Para una reunión","Para un buffet"]},
   {group:"Restricciones",items:["Saludable","Vegetariano","Vegano","Sin gluten","Sin lactosa","Sin mariscos","Sin frutos secos","Bajo en calorías","Alto en proteína","Keto"]},
   {group:"Tiempo",items:["Rápido (< 30 min)","Rápido (< 45 min)","Media hora","Para el fin de semana","Requiere marinado"]},
-  {group:"Estilo",items:["Económico","Gourmet","Tradicional","Fusión","Peruano","Mediterráneo","Asiático","Mexicano"]},
+  {group:"Estilo",items:["Económico","Gourmet","Tradicional","Fusión","Peruano","Mediterráneo","Asiático","Mexicano"]},,
+{id:"r5",name:"Causa de Pulpo al Olivo",category:"Entradas",portions:4,photo:null,cutlery:["fork_knife"],colls:[],plating:"Causa desmoldada en plato frío. Capas visibles: base y tapa de masa amarilla, relleno de pulpo al olivo. Cubierta con láminas de palta, medias lunas de huevo duro y tiras de pimiento.",steps:[
+  {id:"s14",name:"Masa de Causa",method:"Papa amarilla cocida con cáscara, pelada en caliente. Aplastar con prensapapas. Incorporar ají amarillo, limón, aceite y sal. Amasar hasta masa homogénea.",ingredients:[{id:"i44",name:"Papa amarilla",quantity:800,unit:"g",yieldPct:78},{id:"i45",name:"Pasta de ají amarillo",quantity:60,unit:"g",yieldPct:100},{id:"i46",name:"Jugo de limón",quantity:40,unit:"ml",yieldPct:70},{id:"i47",name:"Aceite vegetal",quantity:30,unit:"ml",yieldPct:100}]},
+  {id:"s15",name:"Relleno de Pulpo al Olivo",method:"Pulpo cocido cortado en cubos pequeños. Mezclar con salsa al olivo (mayonesa + pasta de aceituna negra), sal y pimienta.",ingredients:[{id:"i48",name:"Pulpo cocido",quantity:400,unit:"g",yieldPct:90},{id:"i49",name:"Mayonesa",quantity:80,unit:"g",yieldPct:100},{id:"i50",name:"Pasta de aceituna negra",quantity:40,unit:"g",yieldPct:100}]},
+  {id:"s16",name:"Armado",method:"Forrar molde con film. Capa de masa (1.5cm), relleno de pulpo, segunda capa de masa. Prensar y refrigerar 30 min. Desmoldar, decorar con palta, huevo y pimiento.",ingredients:[{id:"i51",name:"Palta",quantity:1,unit:"unid",yieldPct:75},{id:"i52",name:"Huevo duro",quantity:2,unit:"unid",yieldPct:88}]}
+]}
 ];
 
 function NecesidadLab({onAddRecipe,onOpenRecipes}){
