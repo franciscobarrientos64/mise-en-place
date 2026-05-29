@@ -319,34 +319,44 @@ function RecipeCard({recipe,onOpen,colls,onEdit,onExport}){
   const cuts=CUTLERY.filter(c=>recipe.cutlery?.includes(c.id)).map(c=>c.icon).join(" ");
   const rc=recipe.colls?.map(cid=>colls?.find(c=>c.id===cid)).filter(Boolean)||[];
   return(
-    <div onMouseOver={()=>setHov(true)} onMouseOut={()=>{setHov(false);}}
-      style={{background:G.w,border:`1px solid ${hov?G.brdL:G.brd}`,borderRadius:10,cursor:"pointer",overflow:"visible",transition:"all .22s",transform:hov?"translateY(-2px)":"none",boxShadow:hov?"0 8px 24px rgba(27,79,216,.08)":"0 1px 4px rgba(0,0,0,.04)",position:"relative"}}>
-      {/* ··· menu */}
-      <button onClick={e=>{e.stopPropagation();setMenu(p=>!p);}} style={{position:"absolute",top:10,right:10,zIndex:10,background:"rgba(0,0,0,.35)",border:"none",borderRadius:6,color:"#fff",width:28,height:28,cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",transition:"background .15s",fontWeight:700,letterSpacing:1}}>···</button>
+    <div onMouseOver={()=>setHov(true)} onMouseOut={()=>{setHov(false);setMenu(false);}}
+      style={{background:G.w,border:`1px solid ${hov?G.blue+"44":G.brd}`,borderRadius:12,cursor:"pointer",overflow:"visible",transition:"all .2s",transform:hov?"translateY(-3px)":"none",boxShadow:hov?"0 12px 32px rgba(27,79,216,.1)":"0 1px 6px rgba(0,0,0,.05)",position:"relative"}}>
+      {/* ··· button */}
+      <button onClick={e=>{e.stopPropagation();setMenu(p=>!p);}}
+        style={{position:"absolute",top:10,right:10,zIndex:20,background:"rgba(0,0,0,.5)",backdropFilter:"blur(4px)",border:"none",borderRadius:20,color:"#fff",width:30,height:30,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,letterSpacing:1,opacity:hov||menu?1:0,transition:"opacity .2s"}}>···</button>
       {menu&&(
-        <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:44,right:10,zIndex:100,background:G.w,border:`1px solid ${G.brd}`,borderRadius:8,boxShadow:"0 8px 24px rgba(0,0,0,.12)",minWidth:160,overflow:"hidden"}}>
-          <button onClick={()=>{onEdit&&onEdit();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>✏️  Editar receta</button>
-          <button onClick={()=>{onExport&&onExport();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>⬇  Exportar JSON</button>
-          <div style={{borderTop:`1px solid ${G.brd}`,margin:"2px 0"}}/>
-          <button onClick={()=>{onOpen&&onOpen();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.blue,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.blueTint} onMouseOut={e=>e.currentTarget.style.background="none"}>↗  Abrir detalle</button>
+        <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:46,right:10,zIndex:100,background:G.w,border:`1px solid ${G.brd}`,borderRadius:10,boxShadow:"0 12px 32px rgba(0,0,0,.14)",minWidth:165,overflow:"hidden"}}>
+          <button onClick={()=>{onOpen&&onOpen();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>↗  Abrir detalle</button>
+          <button onClick={()=>{onEdit&&onEdit();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>✏️  Editar</button>
+          <div style={{borderTop:`1px solid ${G.brd}`}}/>
+          <button onClick={()=>{onExport&&onExport();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.textMid,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>⬇  Exportar JSON</button>
         </div>
       )}
-      <div onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{height:170,background:G.surf,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative",borderRadius:"10px 10px 0 0"}}>
-        {recipe.photo?<img src={recipe.photo} alt={recipe.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-          :<span style={{fontFamily:FH,fontSize:48,color:G.brd,fontWeight:700,letterSpacing:-2}}>{recipe.name.charAt(0)}</span>}
-        <div style={{position:"absolute",top:10,left:12,background:G.blueTint,border:`1px solid ${G.blue}22`,padding:"2px 9px",borderRadius:20,fontSize:9,color:G.blue,fontFamily:FB,fontWeight:600,letterSpacing:.5}}>
+      {/* Square photo */}
+      <div onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{aspectRatio:"1",background:recipe.photo?"#000":G.surf,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden",position:"relative",borderRadius:"12px 12px 0 0"}}>
+        {recipe.photo
+          ?<img src={recipe.photo} alt={recipe.name} style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform .3s",transform:hov?"scale(1.04)":"scale(1)"}}/>
+          :<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+              <span style={{fontFamily:FH,fontSize:52,color:G.brd,fontWeight:700,lineHeight:1}}>{recipe.name.charAt(0)}</span>
+              <span style={{fontFamily:FB,fontSize:9,color:G.brd,letterSpacing:2,textTransform:"uppercase"}}>Sin foto</span>
+            </div>}
+        {/* Category badge */}
+        <div style={{position:"absolute",top:10,left:10,background:"rgba(255,255,255,.92)",backdropFilter:"blur(8px)",padding:"3px 10px",borderRadius:20,fontSize:9,color:G.text,fontFamily:FB,fontWeight:700,letterSpacing:.3}}>
           {recipe.category}
         </div>
-        {rc.length>0&&<div style={{position:"absolute",bottom:10,left:12,display:"flex",gap:4}}>
-          {rc.map(c=><span key={c.id} style={{background:c.color+"18",border:`1px solid ${c.color}44`,padding:"2px 7px",borderRadius:10,fontSize:9,color:c.color,fontWeight:600}}>{c.name}</span>)}
+        {/* Collection badges */}
+        {rc.length>0&&<div style={{position:"absolute",bottom:10,left:10,display:"flex",gap:4,flexWrap:"wrap"}}>
+          {rc.map(cc=><span key={cc.id} style={{background:cc.color,padding:"2px 8px",borderRadius:20,fontSize:9,color:"#fff",fontWeight:700}}>{cc.name}</span>)}
         </div>}
       </div>
-      <div onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{padding:"16px 18px 18px"}}>
-        <h3 style={{fontFamily:FH,fontSize:17,color:G.text,margin:"0 0 8px",fontWeight:700,lineHeight:1.25}}>{recipe.name}</h3>
-        <div style={{display:"flex",gap:12,color:G.textMut,fontSize:10,fontFamily:FB}}>
-          <span>{recipe.portions} porciones</span>
-          {cuts&&<span>{cuts}</span>}
+      {/* Card body */}
+      <div onClick={()=>{setMenu(false);onOpen&&onOpen();}} style={{padding:"14px 16px 16px"}}>
+        <h3 style={{fontFamily:FH,fontSize:16,color:G.text,margin:"0 0 6px",fontWeight:700,lineHeight:1.25,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{recipe.name}</h3>
+        <div style={{display:"flex",gap:10,color:G.textMut,fontSize:10,fontFamily:FB,alignItems:"center"}}>
+          <span>{recipe.portions}p</span>
+          <span style={{color:G.brd}}>·</span>
           <span>{recipe.steps?.length||0} pasos</span>
+          {cuts&&<><span style={{color:G.brd}}>·</span><span>{cuts}</span></>}
         </div>
       </div>
     </div>
