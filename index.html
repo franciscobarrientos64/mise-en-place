@@ -35,7 +35,8 @@ const SB_URL = 'https://jmkvphayyhwzootlybde.supabase.co/rest/v1';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impta3ZwaGF5eWh3em9vdGx5YmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODE3ODEsImV4cCI6MjA5MzU1Nzc4MX0.EP2vv5avU1FIXlZn4jFo3QkvqnxOdLOrICqNV8qAZxM';
 const SB_H = () => ({ 'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json' });
 const sbLoad  = async()=>{ const r=await fetch(SB_URL+'/recipes?select=*&order=created_at.asc',{headers:SB_H()}); return r.ok?await r.json():[]; };
-const sbUpsert= async(recipe)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipe)});
+const sbUpsert  = async(recipe)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipe)});
+const sbBatch   = async(recipes)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipes)});
 const sbDelete= async(id)=>fetch(SB_URL+'/recipes?id=eq.'+id,{method:'DELETE',headers:SB_H()});
 
 /* ══ TOKENS ══ */
@@ -269,7 +270,7 @@ function App(){
       const localOnly=localReal.filter(r=>!sbIds.has(r.id));
       const merged=[...sbRows,...localOnly];
       // Push local-only recipes to Supabase
-      if(localOnly.length>0) localOnly.forEach(r=>sbUpsert(r));
+      if(localOnly.length>0) sbBatch(localOnly);
       // Use merged set (or DEMO_R if truly empty)
       const final=merged.length>0?merged:DEMO_R;
       setRec(final);
@@ -292,6 +293,12 @@ function App(){
   const goBack=()=>{setView("gallery");setSelId(null);setEditId(null);};
   const saveR=r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);goBack();if(sbReady)sbUpsert(nr);};
   const updR=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));if(sbReady)sbUpsert(r);};
+  const forceSyncAll=async(recs)=>{
+    setSbSyncing(true);
+    const realRecs=recs.filter(r=>!DEMO_R.find(d=>d.id===r.id));
+    if(realRecs.length>0) await sbBatch(realRecs);
+    setSbSyncing(false);
+  };
   const delR=id=>{setRec(p=>p.filter(r=>r.id!==id));goBack();if(sbReady)sbDelete(id);};
   const startEdit=id=>{setEditId(id);setSelId(id);setView("edit");};
   const saveEdit=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));setView("detail");setEditId(null);if(sbReady)sbUpsert(r);};
@@ -338,11 +345,7 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady}){
             onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
             + Nueva Receta
           </button>}
-          {/* Sync status */}
-          <div style={{display:"flex",alignItems:"center",gap:4,fontSize:10,fontFamily:FB,color:sbSyncing?"#F59E0B":sbReady?"#10B981":"#9CA3AF"}} title={sbSyncing?"Sincronizando…":sbReady?"Guardado en la nube":"Sin conexión a nube"}>
-            <div style={{width:6,height:6,borderRadius:"50%",background:sbSyncing?"#F59E0B":sbReady?"#10B981":"#9CA3AF",animation:sbSyncing?"pulse 1s infinite":"none"}}/>
-            {sbSyncing?"Sincronizando":sbReady?"Nube ✓":"Local"}
-          </div>
+
       </nav>
     </header>
   );
@@ -397,6 +400,16 @@ function Gallery({recipes,onOpen,search,setSearch,catF,setCatF,total,colls,onImp
               }}/>
             </label>
             <button onClick={()=>setShowImport(true)} style={bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>📥 Importar receta</button>
+          </div>
+          {/* Cloud sync status */}
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:sbSyncing?"#FEF3C7":sbReady?"#ECFDF5":"#F9FAFB",border:`1px solid ${sbSyncing?"#FCD34D":sbReady?"#6EE7B7":"#E5E7EB"}`}}>
+              <span style={{fontSize:13}}>{sbSyncing?"☁️":sbReady?"✅":"💾"}</span>
+              <span style={{fontFamily:FB,fontSize:11,fontWeight:600,color:sbSyncing?"#92400E":sbReady?"#065F46":"#6B7280"}}>
+                {sbSyncing?"Sincronizando con la nube…":sbReady?`Nube sincronizada — ${total} receta${total!==1?"s":""}`:"Guardado solo localmente"}
+              </span>
+            </div>
+            {sbReady&&!sbSyncing&&<button onClick={onForceSync} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:20}),color:G.textMut}} title="Forzar sincronización completa con Supabase" onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>⟳ Forzar sync</button>}
           </div>
         </div>
       </div>
