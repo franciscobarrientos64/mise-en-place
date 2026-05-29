@@ -440,8 +440,9 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
 }
 
 function RecipeTab({recipe,onUpdate}){
-  const[editStep,setEditStep]=useState(null); // {stepId, field} being edited
+  const[editStep,setEditStep]=useState(null);
   const[draft,setDraft]=useState("");
+  const[extracting,setExtracting]=useState({}); // {stepId: true} while loading
 
   const startEdit=(stepId,field,current)=>{setEditStep({stepId,field});setDraft(current);};
   const saveEdit=(stepId,field)=>{
@@ -457,6 +458,35 @@ function RecipeTab({recipe,onUpdate}){
     setEditStep(null);
   };
   const isEditing=(sid,f)=>editStep?.stepId===sid&&editStep?.field===f;
+
+  const extractIngredients=async(step)=>{
+    if(!onUpdate||!step.method)return;
+    setExtracting(p=>({...p,[step.id]:true}));
+    try{
+      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,
+          system:"Eres un chef experto. Extraes ingredientes de textos de recetas. Responde SOLO con JSON válido, sin texto extra.",
+          messages:[{role:"user",content:`Analiza este texto de receta y extrae TODOS los ingredientes con sus cantidades y unidades.
+
+Texto: "${step.method}"
+
+Responde SOLO con este JSON válido (array):
+[{"name":"Ingrediente","quantity":2,"unit":"tazas","yieldPct":100}]
+
+Si no hay cantidad específica usa 1. Unidades válidas: g, kg, ml, l, tsp, tbsp, cup, oz, lb, unid, al gusto.`}]})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data?.error?.message||"Error API");
+      const raw=(data.content?.[0]?.text||"").replace(/```json
+?|```
+?/g,"").trim();
+      const m=raw.match(/\[[\s\S]*\]/);
+      const ings=JSON.parse(m?m[0]:raw);
+      const updated={...recipe,steps:recipe.steps.map(s=>s.id!==step.id?s:
+        {...s,ingredients:ings.map(i=>({...i,id:gid()}))})};
+      onUpdate(updated);
+    }catch(e){alert("Error extrayendo ingredientes: "+e.message);}
+    setExtracting(p=>({...p,[step.id]:false}));
+  };
 
   const editStyle={cursor:"text",borderBottom:`1px dashed ${G.blue}`,paddingBottom:1};
   const pencil=<span style={{fontSize:9,color:G.blue,marginLeft:5,opacity:.5}}>✎</span>;
@@ -482,19 +512,25 @@ function RecipeTab({recipe,onUpdate}){
             {/* Ingredients */}
             <div style={{flex:"0 0 280px",minWidth:180}}>
               <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:10,fontFamily:FB}}>Ingredientes</p>
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr style={{borderBottom:`1px solid ${G.brd}`}}>
-                  {["Ingrediente","Cant.","Unid.","Rend."].map(h=><th key={h} style={{textAlign:"left",padding:"4px 5px",fontSize:9,color:G.textMut,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",fontFamily:FB}}>{h}</th>)}
-                </tr></thead>
-                <tbody>{step.ingredients.map(i=>(
-                  <tr key={i.id} style={{borderBottom:`1px solid ${G.brd}`}}>
-                    <td style={{padding:"6px 5px",fontSize:12,color:G.text,fontFamily:FB}}>{i.name}</td>
-                    <td style={{padding:"6px 5px",fontSize:12,color:G.textMid,textAlign:"right",fontFamily:FB}}>{fmtN(i.quantity,2)}</td>
-                    <td style={{padding:"6px 5px",fontSize:11,color:G.textMut,fontFamily:FB}}>{i.unit}</td>
-                    <td style={{padding:"6px 5px",fontSize:11,color:G.blue,textAlign:"right",fontFamily:FB,fontWeight:500}}>{i.yieldPct}%</td>
-                  </tr>
-                ))}</tbody>
-              </table>
+              {step.ingredients.length===0&&onUpdate
+                ?<button onClick={()=>extractIngredients(step)} disabled={extracting[step.id]}
+                    style={{...bv("p",{padding:"8px 14px",fontSize:11,borderRadius:6,width:"100%",opacity:extracting[step.id]?.6:1}),display:"flex",alignItems:"center",justifyContent:"center",gap:6,marginTop:4}}
+                    onMouseOver={e=>{if(!extracting[step.id])e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                    {extracting[step.id]?"Extrayendo…":"✦ Extraer ingredientes con IA"}
+                  </button>
+                :<table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr style={{borderBottom:`1px solid ${G.brd}`}}>
+                    {["Ingrediente","Cant.","Unid.","Rend."].map(h=><th key={h} style={{textAlign:"left",padding:"4px 5px",fontSize:9,color:G.textMut,fontWeight:600,letterSpacing:.8,textTransform:"uppercase",fontFamily:FB}}>{h}</th>)}
+                  </tr></thead>
+                  <tbody>{step.ingredients.map(i=>(
+                    <tr key={i.id} style={{borderBottom:`1px solid ${G.brd}`}}>
+                      <td style={{padding:"6px 5px",fontSize:12,color:G.text,fontFamily:FB}}>{i.name}</td>
+                      <td style={{padding:"6px 5px",fontSize:12,color:G.textMid,textAlign:"right",fontFamily:FB}}>{fmtN(i.quantity,2)}</td>
+                      <td style={{padding:"6px 5px",fontSize:11,color:G.textMut,fontFamily:FB}}>{i.unit}</td>
+                      <td style={{padding:"6px 5px",fontSize:11,color:G.blue,textAlign:"right",fontFamily:FB,fontWeight:500}}>{i.yieldPct}%</td>
+                    </tr>
+                  ))}</tbody>
+                </table>}
             </div>
             {/* Methodology */}
             <div style={{flex:1,minWidth:180}}>
