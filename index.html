@@ -259,9 +259,21 @@ function App(){
   const[sbSyncing,setSbSyncing]=useState(false);
   useEffect(()=>{
     setSbSyncing(true);
-    sbLoad().then(rows=>{
-      if(rows.length>0){setRec(rows);try{localStorage.setItem('mep_recipes',JSON.stringify(rows));}catch(e){}}
-      else{try{const local=JSON.parse(localStorage.getItem('mep_recipes')||'[]');const toMig=local.filter(r=>!DEMO_R.find(d=>d.id===r.id));if(toMig.length>0)toMig.forEach(r=>sbUpsert(r));}catch(e){}}
+    sbLoad().then(sbRows=>{
+      // Get local recipes (excluding demos)
+      let local=[];
+      try{const s=localStorage.getItem('mep_recipes');if(s)local=JSON.parse(s);}catch(e){}
+      const localReal=local.filter(r=>!DEMO_R.find(d=>d.id===r.id));
+      // Merge: Supabase + any local recipes not yet in Supabase
+      const sbIds=new Set(sbRows.map(r=>r.id));
+      const localOnly=localReal.filter(r=>!sbIds.has(r.id));
+      const merged=[...sbRows,...localOnly];
+      // Push local-only recipes to Supabase
+      if(localOnly.length>0) localOnly.forEach(r=>sbUpsert(r));
+      // Use merged set (or DEMO_R if truly empty)
+      const final=merged.length>0?merged:DEMO_R;
+      setRec(final);
+      try{localStorage.setItem('mep_recipes',JSON.stringify(final));}catch(e){}
       setSbReady(true);setSbSyncing(false);
     }).catch(()=>{setSbReady(false);setSbSyncing(false);});
   },[]);
