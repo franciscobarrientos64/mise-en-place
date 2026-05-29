@@ -331,6 +331,42 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+
+const exportShoppingList=(recipe,portions)=>{
+  const scale=portions&&recipe.portions?portions/recipe.portions:1;
+  const fmtQty=(qty,unit)=>{
+    if(unit==='al gusto')return'al gusto';
+    const v=qty*scale;
+    const r=v%1===0?v:Math.round(v*100)/100;
+    return `${r} ${unit}`;
+  };
+  const lines=[
+    `🛒 LISTA DE COMPRAS — ${recipe.name} (${Math.round((recipe.portions||1)*scale)} porciones)`,
+    ''
+  ];
+  (recipe.steps||[]).forEach(step=>{
+    if(!step.ingredients||step.ingredients.length===0)return;
+    lines.push(step.name.toUpperCase());
+    step.ingredients.forEach(ing=>{
+      lines.push(`□ ${ing.name} · ${fmtQty(ing.quantity,ing.unit)}`);
+    });
+    lines.push('');
+  });
+  lines.push('— mise-en-place-smoky.vercel.app');
+  return lines.join('\n');
+};
+
+const shareShoppingList=(recipe,portions)=>{
+  const text=exportShoppingList(recipe,portions);
+  if(navigator.share){
+    navigator.share({title:`Lista de compras — ${recipe.name}`,text}).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(text).then(()=>alert('✅ Lista copiada al portapapeles')).catch(()=>{
+      const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('✅ Lista copiada al portapapeles');
+    });
+  }
+};
+
 function App(){
   const demoIds=new Set(DEMO_R.map(r=>r.id));
   const[nav,setNav]=useState("recipes");
@@ -545,6 +581,7 @@ function RecipeCard({recipe,onOpen,colls,onEdit,onExport,onDelete}){
           <button onClick={()=>{onEdit&&onEdit();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>✏️  Editar</button>
           <div style={{borderTop:`1px solid ${G.brd}`}}/>
           <button onClick={()=>{onExport&&onExport();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.textMid,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>⬇  Exportar JSON</button>
+          <button onClick={()=>{shareShoppingList(recipe,recipe.portions);setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>🛒  Lista de compras</button>
           <div style={{borderTop:`1px solid ${G.brd}`}}/>
           <button onClick={()=>{if(window.confirm('¿Eliminar "'+recipe.name+'"?')){onDelete&&onDelete();setMenu(false);}}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.red,textAlign:"left",fontWeight:600}} onMouseOver={e=>e.currentTarget.style.background="#FEF2F2"} onMouseOut={e=>e.currentTarget.style.background="none"}>🗑  Eliminar receta</button>
         </div>
@@ -644,6 +681,7 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
           a.download=recipe.name.replace(/\s+/g,"-").toLowerCase()+".json";
           a.click();URL.revokeObjectURL(url);
         }} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:6,marginRight:6})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>⬇ JSON</button>
+        <button onClick={()=>shareShoppingList(recipe,recipe.portions)} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:6,marginRight:6})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>🛒 Lista de compras</button>
         <button onClick={onEdit} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:6,marginRight:6})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>✏️ Editar</button>
         <button onClick={onDelete} style={{...bv("ghost",{fontSize:10,color:G.red,borderColor:G.red+"44",padding:"4px 12px",alignSelf:"center",borderRadius:6})}}
           onMouseOver={e=>e.currentTarget.style.background=G.red+"08"} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
