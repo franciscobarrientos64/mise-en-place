@@ -619,8 +619,21 @@ function ImportModal({onClose,onImport,colls}){
     const isPDF=file.type==="application/pdf"||ext==="pdf";
     const isImg=file.type.startsWith("image/")||imgExts.includes(ext);
     const isHEIC=ext==="heic"||ext==="heif";
-    const isExcel=file.name.match(/\.xlsx?$|\.csv$/i);
-    const isWord=file.name.match(/\.docx?$/i);
+    const isJSON=ext==="json";
+    const isCSV=ext==="csv";
+    const isMarkdown=ext==="md"||ext==="markdown";
+
+    // JSON — no AI needed, already structured
+    if(isJSON){
+      const text=await toText(file);
+      const data=JSON.parse(text);
+      if(Array.isArray(data)){
+        // Return special marker — caller handles array expansion
+        return {_isArray:true,_items:data};
+      }
+      return data; // single recipe object
+    }
+
     let messages;
     if(isPDF){
       const b64=await toBase64(file);
@@ -632,8 +645,11 @@ function ImportModal({onClose,onImport,colls}){
       const b64=await toBase64(file);
       messages=[{role:"user",content:[{type:"image",source:{type:"base64",media_type:mimeType,data:b64}},{type:"text",text:EXTRACT_PROMPT}]}];
     } else {
+      // TXT, CSV, MD, RTF, DOC, XLS — read as text and send to Claude
       const text=await toText(file);
-      messages=[{role:"user",content:EXTRACT_PROMPT+"\n\nContenido:\n"+text.slice(0,8000)}];
+      const hint=isCSV?"Este archivo CSV puede contener múltiples recetas en columnas. Extrae la primera receta completa.":
+                  isMarkdown?"Este archivo Markdown contiene una receta.":"";
+      messages=[{role:"user",content:EXTRACT_PROMPT+(hint?"\n\n"+hint:"")+"\n\nContenido:\n"+text.slice(0,10000)}];
     }
     const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
       body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2000,
@@ -664,10 +680,18 @@ function ImportModal({onClose,onImport,colls}){
       setBatchFiles([...updated]);
       try{
         const parsed=await extractOne(updated[i].file);
-        const recipe=normalize(parsed);
-        onImport(recipe);
-        updated[i]={...updated[i],status:"ok",recipeName:parsed.name};
-        saved++;
+        // JSON array — expand all recipes at once
+        if(parsed._isArray){
+          const items=parsed._items||[];
+          items.forEach(r=>onImport(normalize(r)));
+          updated[i]={...updated[i],status:"ok",recipeName:`${items.length} recetas de ${updated[i].name}`};
+          saved+=items.length;
+        } else {
+          const recipe=normalize(parsed);
+          onImport(recipe);
+          updated[i]={...updated[i],status:"ok",recipeName:parsed.name};
+          saved++;
+        }
         setBatchSaved(saved);
       }catch(e){
         updated[i]={...updated[i],status:"error",errorMsg:e.message};
@@ -771,8 +795,8 @@ function ImportModal({onClose,onImport,colls}){
           {/* ─── SINGLE FILE ─── */}
           {tab==="file"&&(
             <div>
-              <p style={{fontFamily:FB,fontSize:12,color:G.textMid,marginBottom:12,lineHeight:1.6}}>Sube un archivo con tu receta. Soporta <strong>PDF</strong>, <strong>Word</strong>, <strong>Excel</strong>, <strong>TXT</strong>, <strong>foto</strong> (incluso escrita a mano).</p>
-              <input type="file" ref={fileRef} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic,.txt" style={{display:"none"}} onChange={e=>e.target.files[0]&&importFile(e.target.files[0])}/>
+              <p style={{fontFamily:FB,fontSize:12,color:G.textMid,marginBottom:12,lineHeight:1.6}}>Sube un archivo con tu receta. Soporta <strong>PDF</strong>, <strong>Word</strong>, <strong>Excel</strong>, <strong>JSON</strong>, <strong>CSV</strong>, <strong>TXT</strong>, <strong>Markdown</strong>, <strong>foto</strong>.</p>
+              <input type="file" ref={fileRef} accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic,.txt,.json,.csv,.md,.rtf,.odt" style={{display:"none"}} onChange={e=>e.target.files[0]&&importFile(e.target.files[0])}/>
               <div
                 onClick={()=>!loading&&fileRef.current.click()}
                 onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=G.blue;e.currentTarget.style.background=G.blueTint;}}
@@ -781,7 +805,7 @@ function ImportModal({onClose,onImport,colls}){
                 style={{border:`2px dashed ${G.brd}`,borderRadius:10,padding:"28px 20px",textAlign:"center",cursor:loading?"not-allowed":"pointer",background:G.surf,transition:"all .15s",opacity:loading?.6:1}}>
                 <p style={{fontFamily:FH,fontSize:22,margin:"0 0 6px"}}>{loading?"⏳":"📂"}</p>
                 <p style={{fontFamily:FH,fontSize:14,color:G.text,margin:"0 0 4px",fontWeight:700}}>{loading?"Analizando con IA…":"Arrastra tu archivo aquí"}</p>
-                <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>o haz clic para seleccionar · PDF, Word, Excel, TXT, foto</p>
+                <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>o haz clic para seleccionar · PDF · Word · Excel · JSON · CSV · MD · foto</p>
               </div>
             </div>
           )}
@@ -790,7 +814,7 @@ function ImportModal({onClose,onImport,colls}){
           {tab==="batch"&&(
             <div>
               <p style={{fontFamily:FB,fontSize:12,color:G.textMid,marginBottom:14,lineHeight:1.6}}>
-                Selecciona <strong>múltiples archivos</strong> de golpe. La app los procesa en cola automáticamente y guarda cada receta exitosa en tu repositorio.
+                Selecciona <strong>múltiples archivos</strong> de golpe. Soporta PDF, Word, Excel, JSON (unitario o array), CSV, TXT, Markdown y fotos. Procesa en cola y guarda automáticamente.
               </p>
               {/* Drop zone */}
               {!batchRunning&&!batchFinished&&(
@@ -802,10 +826,10 @@ function ImportModal({onClose,onImport,colls}){
                   style={{border:`2px dashed ${G.brd}`,borderRadius:10,padding:"28px",textAlign:"center",cursor:"pointer",background:G.surf,marginBottom:14,transition:"all .15s"}}>
                   <p style={{fontFamily:FH,fontSize:22,margin:"0 0 6px"}}>📂</p>
                   <p style={{fontFamily:FH,fontSize:15,color:G.text,margin:"0 0 4px",fontWeight:700}}>Arrastra aquí tus archivos</p>
-                  <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>o haz clic para seleccionar — PDF, Word, Excel, fotos</p>
+                  <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>o haz clic — PDF, Word, Excel, JSON, CSV, MD, foto</p>
                 </div>
               )}
-              <input type="file" ref={batchRef} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic,.txt" style={{display:"none"}} onChange={e=>addBatchFiles(e.target.files)}/>
+              <input type="file" ref={batchRef} multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.heic,.txt,.json,.csv,.md,.rtf,.odt" style={{display:"none"}} onChange={e=>addBatchFiles(e.target.files)}/>
 
               {/* File queue */}
               {batchFiles.length>0&&(
