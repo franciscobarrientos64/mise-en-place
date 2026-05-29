@@ -33,14 +33,9 @@ const AI_URL = '/api/claude';
 // ── Supabase ──
 const SB_URL = 'https://jmkvphayyhwzootlybde.supabase.co/rest/v1';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impta3ZwaGF5eWh3em9vdGx5YmRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODE3ODEsImV4cCI6MjA5MzU1Nzc4MX0.EP2vv5avU1FIXlZn4jFo3QkvqnxOdLOrICqNV8qAZxM';
-const SB_H = () => ({ 'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json' });
+const useMobile=()=>{const[w,setW]=useState(window.innerWidth);useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);return w<768;};
 
-// ── Mobile detection hook ──
-const useMobile = () => {
-  const [w, setW] = useState(window.innerWidth);
-  useEffect(()=>{const h=()=>setW(window.innerWidth);window.addEventListener('resize',h);return()=>window.removeEventListener('resize',h);},[]);
-  return w < 768;
-};
+const SB_H = () => ({ 'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json' });
 const sbLoad  = async()=>{ const r=await fetch(SB_URL+'/recipes?select=*&order=created_at.asc',{headers:SB_H()}); return r.ok?await r.json():[]; };
 const sbUpsert  = async(recipe)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipe)});
 const sbBatch   = async(recipes)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipes)});
@@ -212,6 +207,70 @@ plating:"Molde cilíndrico individual desmoldado sobre plato frío. Capa visible
   {id:"s11",name:"Crema Posset",method:"Crema + azúcar a fuego medio hasta disolver. Llevar a hervor suave 4-5 min.",ingredients:[{id:"i39",name:"Crema de leche",quantity:475,unit:"ml",yieldPct:100},{id:"i40",name:"Azúcar",quantity:150,unit:"g",yieldPct:100}]},
   {id:"s12",name:"Incorporar Limón",method:"Apagar fuego. Agregar jugo de limón. Enfriar a temperatura ambiente. Colar con malla fina.",ingredients:[{id:"i41",name:"Jugo de limón",quantity:75,unit:"ml",yieldPct:75}]},
   {id:"s13",name:"Moldear y Brûlée",method:"Vaciar limones. Llenar con crema. Refrigerar 3h mínimo. Brûlée con azúcar y soplete antes de servir.",ingredients:[{id:"i42",name:"Limones",quantity:3,unit:"unid",yieldPct:100},{id:"i43",name:"Azúcar brûlée",quantity:10,unit:"g",yieldPct:100}]}
+]},
+{id:"r6",name:"Causa de Anchoveta",category:"Entradas",portions:4,photo:null,cutlery:["fork_knife"],colls:[],plating:"Causa desmoldada. Base de masa amarilla con anchovetas escurridas, bañada con salsa chalaca. Tomate y cebolla frescos visibles. Hilo de aceite de oliva al final.",steps:[
+{id:"s18",name:"Masa de Causa",method:"Sancochar papa amarilla con cáscara hasta cocida pero firme. Pelar en caliente y prensar de inmediato. Entibiar. Incorporar pasta de ají amarillo, jugo de limón y aceite. Amasar hasta masa homogénea. Rectificar sal.",ingredients:[
+{id:"i56",name:"Papa amarilla",quantity:600,unit:"g",yieldPct:85},
+{id:"i57",name:"Pasta de ají amarillo",quantity:45,unit:"ml",yieldPct:100},
+{id:"i58",name:"Jugo de limón",quantity:45,unit:"ml",yieldPct:75},
+{id:"i59",name:"Aceite vegetal",quantity:30,unit:"ml",yieldPct:100},
+{id:"i60",name:"Sal",quantity:1,unit:"al gusto",yieldPct:100}]},
+{id:"s19",name:"Salsa Chalaca",method:"Picar cebolla roja en brunoise muy fino. Picar tomate en brunoise retirando semillas. Picar ají limo fino. Mezclar con mayonesa clásica, jugo de limón y aceite de oliva. Rectificar sal.",ingredients:[
+{id:"i61",name:"Cebolla roja",quantity:0.5,unit:"unid",yieldPct:90},
+{id:"i62",name:"Tomate",quantity:1,unit:"unid",yieldPct:80},
+{id:"i63",name:"Ají limo",quantity:0.5,unit:"unid",yieldPct:85},
+{id:"i64",name:"Mayonesa clásica",quantity:120,unit:"ml",yieldPct:100},
+{id:"i65",name:"Jugo de limón",quantity:30,unit:"ml",yieldPct:75},
+{id:"i66",name:"Aceite de oliva",quantity:15,unit:"ml",yieldPct:100}]},
+{id:"s20",name:"Armado",method:"Escurrir anchovetas del aceite. Dividir masa en dos partes. Forrar base del molde con primera mitad (1.5 cm). Distribuir anchovetas en capa pareja. Cubrir con segunda mitad de masa. Refrigerar 20-30 min. Desmoldar, bañar con salsa chalaca y servir.",ingredients:[
+{id:"i67",name:"Anchovetas o sardinas en aceite vegetal",quantity:300,unit:"g",yieldPct:100}]}
+]},
+{id:"r7",name:"Lentejas con Chorizo y Pollo",category:"Sopas & Caldos",portions:6,photo:null,cutlery:["fork_knife","spoon"],colls:[],plating:"Servir en plato hondo o bowl. Lentejas caldosas con zanahoria y papa yungay en rodajas visibles. Trozos de pollo y chorizo distribuidos. Espolvorear orégano fresco al momento. Pan o arroz blanco de acompañamiento.",steps:[
+{id:"s21",name:"Dorar Proteínas",method:"Calentar un chorrito generoso de aceite en olla a fuego medio-alto. Dorar los chorizos cortados en rodajas hasta que suelten su grasa y estén dorados. Retirar y reservar. En el mismo aceite con la grasa del chorizo, dorar los muslos de pollo salpimentados por todos lados hasta sellar bien. Retirar y reservar.",ingredients:[
+{id:"i68",name:"Chorizos parrilleros",quantity:3,unit:"unid",yieldPct:100},
+{id:"i69",name:"Muslos de pollo",quantity:2,unit:"unid",yieldPct:90},
+{id:"i70",name:"Aceite vegetal",quantity:1,unit:"al gusto",yieldPct:100}]},
+{id:"s22",name:"Aderezo Base",method:"En la misma olla, sudar la cebolla roja en brunoise hasta transparente. Agregar el ajo picado fino y el pimiento en brunoise, cocinar 2 minutos. Incorporar la pasta de tomate y la pasta de ají panca. Cocinar el aderezo a fuego medio revolviendo constantemente hasta que oscurezca y concentre, unos 5 minutos. Agregar la hoja de laurel.",ingredients:[
+{id:"i71",name:"Cebolla roja",quantity:1,unit:"unid",yieldPct:90},
+{id:"i72",name:"Dientes de ajo",quantity:5,unit:"unid",yieldPct:95},
+{id:"i73",name:"Pimiento (en brunoise)",quantity:0.5,unit:"unid",yieldPct:85},
+{id:"i74",name:"Pasta de tomate",quantity:3,unit:"tbsp",yieldPct:100},
+{id:"i75",name:"Pasta de ají panca",quantity:1,unit:"tsp",yieldPct:100},
+{id:"i76",name:"Hoja de laurel",quantity:1,unit:"unid",yieldPct:100}]},
+{id:"s23",name:"Cocción de Lentejas",method:"Agregar las lentejas baby al aderezo y revolver para impregnar. Verter el caldo de pollo caliente. Incorporar el pollo y el chorizo reservados. Añadir la zanahoria en rodajas y la papa yungay en trozos. Llevar a hervor, reducir a fuego medio-bajo y cocinar 25-30 minutos hasta que las lentejas estén tiernas y el caldo haya tomado cuerpo. Agregar orégano al gusto. Rectificar sal y pimienta.",ingredients:[
+{id:"i77",name:"Lentejas baby",quantity:500,unit:"g",yieldPct:100},
+{id:"i78",name:"Caldo de pollo",quantity:1500,unit:"ml",yieldPct:100},
+{id:"i79",name:"Zanahoria",quantity:1,unit:"unid",yieldPct:85},
+{id:"i80",name:"Papa yungay",quantity:1,unit:"unid",yieldPct:85},
+{id:"i81",name:"Orégano",quantity:1,unit:"al gusto",yieldPct:100}]}
+]},
+{id:"r8",name:"Lasagna Original Italiana",category:"Pastas & Arroces",portions:6,photo:null,cutlery:["fork_knife"],colls:[],plating:"Lasagna reposada 10-15 min antes de cortar. Porciones limpias con espátula. Última capa de bechamel dorada y gratinada visible.",steps:[
+{id:"s25",name:"Ragú de Carne",method:"Cortar panceta en cubos pequeños, retirar la piel. Dorar en sartén a fuego medio hasta que suelte su grasa. Añadir aceite, incorporar cebolla, zanahoria y apio en brunoise. Salar y cocinar a fuego medio-bajo hasta ablandar. Añadir carne, subir a fuego medio-alto y remover hasta cambio de color. Verter vino tinto y cocinar hasta evaporar el alcohol. Añadir tomates. Llevar a hervor, bajar fuego, tapar dejando ranura. Cocinar 2-4 horas. Si seca, añadir agua o caldo. Al final: salpimentar y añadir la leche para equilibrar la acidez.",ingredients:[
+{id:"i90",name:"Carne de ternera para guisar",quantity:600,unit:"g",yieldPct:90},
+{id:"i91",name:"Panceta de cerdo",quantity:300,unit:"g",yieldPct:85},
+{id:"i92",name:"Cebolla",quantity:1,unit:"unid",yieldPct:90},
+{id:"i93",name:"Zanahoria",quantity:2,unit:"unid",yieldPct:85},
+{id:"i94",name:"Apio",quantity:1,unit:"unid",yieldPct:80},
+{id:"i95",name:"Vino tinto",quantity:200,unit:"ml",yieldPct:100},
+{id:"i96",name:"Tomates pelados",quantity:800,unit:"g",yieldPct:100},
+{id:"i97",name:"Leche",quantity:50,unit:"ml",yieldPct:100},
+{id:"i98",name:"Aceite de oliva",quantity:45,unit:"ml",yieldPct:100},
+{id:"i99",name:"Sal",quantity:1,unit:"al gusto",yieldPct:100},
+{id:"i100",name:"Pimienta negra molida",quantity:1,unit:"al gusto",yieldPct:100}]},
+{id:"s26",name:"Pasta Casera",method:"Tamizar harina en bol. Añadir sal, huevos y aceite. Integrar con las manos hasta formar bola — no amasar en exceso. Tapar y reposar 20 min. Estirar hasta que empiece a transparentar (~2 mm). Cortar láminas 10x12 cm. Cocer en agua con sal en 2 tandas, ~1 min. Enjuagar con agua fría y secar sobre paño.",ingredients:[
+{id:"i101",name:"Harina común",quantity:200,unit:"g",yieldPct:100},
+{id:"i102",name:"Huevos grandes",quantity:2,unit:"unid",yieldPct:100},
+{id:"i103",name:"Aceite de oliva",quantity:15,unit:"ml",yieldPct:100},
+{id:"i104",name:"Sal",quantity:1,unit:"al gusto",yieldPct:100}]},
+{id:"s27",name:"Bechamel",method:"Derretir mantequilla a fuego medio. Añadir harina y rehogar 2-3 min. Verter leche fría de golpe y subir el fuego. Remover constantemente hasta espesar. Cuando rompa a hervir, bajar a fuego medio 2-3 min más. Retirar del fuego. Condimentar con nuez moscada, sal y pimienta. Cubrir con film en contacto.",ingredients:[
+{id:"i105",name:"Mantequilla",quantity:80,unit:"g",yieldPct:100},
+{id:"i106",name:"Harina común",quantity:80,unit:"g",yieldPct:100},
+{id:"i107",name:"Leche",quantity:750,unit:"ml",yieldPct:100},
+{id:"i108",name:"Nuez moscada",quantity:1,unit:"al gusto",yieldPct:100},
+{id:"i109",name:"Sal",quantity:1,unit:"al gusto",yieldPct:100},
+{id:"i110",name:"Pimienta negra",quantity:1,unit:"al gusto",yieldPct:100}]},
+{id:"s28",name:"Armado y Horneado",method:"Precalentar horno a 180°C. Untar molde 24x24 cm con mantequilla. Fondo de bechamel. Capas: pasta, ragú, bechamel, parmesano. Repetir hasta llenar. Última capa: bechamel generosa y parmesano abundante. Hornear 45 min; últimos 5 min grill a 250°C. Reposar 10-15 min antes de cortar.",ingredients:[
+{id:"i111",name:"Queso parmesano rallado",quantity:200,unit:"g",yieldPct:100}]}
 ]}
 ];
 const DEMO_C=[{id:"c1",name:"Firma",color:COLL_COLORS[0]},{id:"c2",name:"Menú Degustación",color:COLL_COLORS[1]}];
@@ -256,60 +315,19 @@ class ErrorBoundary extends React.Component {
 }
 
 function App(){
-
+  const demoIds=new Set(DEMO_R.map(r=>r.id));
   const[nav,setNav]=useState("recipes");
   const[view,setView]=useState("gallery");
+  const[syncing,setSyncing]=useState(false);
+  const[synced,setSynced]=useState(false);
   const[recipes,setRec]=useState(()=>{
-    try{const s=localStorage.getItem('mep_recipes');if(s){const p=JSON.parse(s);if(p.length>0)return p;}}catch(e){}
+    try{
+      const hidden=new Set(JSON.parse(localStorage.getItem('mep_hidden')||'[]'));
+      const user=JSON.parse(localStorage.getItem('mep_user')||'[]').filter(r=>!demoIds.has(r.id));
+      return [...DEMO_R.filter(r=>!hidden.has(r.id)),...user];
+    }catch(e){}
     return DEMO_R;
   });
-  const[sbReady,setSbReady]=useState(false);
-  const[sbSyncing,setSbSyncing]=useState(false);
-
-  // Refresh from Supabase when app comes back to foreground
-  useEffect(()=>{
-    const onVisible=()=>{
-      if(document.visibilityState==='visible'&&sbReady){
-        setSbSyncing(true);
-        sbLoad().then(rows=>{
-          if(rows.length>0){setRec(rows);try{localStorage.setItem('mep_recipes',JSON.stringify(rows));}catch(e){}}
-          setSbSyncing(false);
-        }).catch(()=>setSbSyncing(false));
-      }
-    };
-    document.addEventListener('visibilitychange',onVisible);
-    return()=>document.removeEventListener('visibilitychange',onVisible);
-  },[sbReady]);
-
-  const refreshFromCloud=()=>{
-    if(!sbReady)return;
-    setSbSyncing(true);
-    sbLoad().then(rows=>{
-      if(rows.length>0){setRec(rows);try{localStorage.setItem('mep_recipes',JSON.stringify(rows));}catch(e){}}
-      setSbSyncing(false);
-    }).catch(()=>setSbSyncing(false));
-  };
-  useEffect(()=>{
-    setSbSyncing(true);
-    sbLoad().then(sbRows=>{
-      // Get local recipes (excluding demos)
-      let local=[];
-      try{const s=localStorage.getItem('mep_recipes');if(s)local=JSON.parse(s);}catch(e){}
-      const localReal=local.filter(r=>!DEMO_R.find(d=>d.id===r.id));
-      // Merge: Supabase + any local recipes not yet in Supabase
-      const sbIds=new Set(sbRows.map(r=>r.id));
-      const localOnly=localReal.filter(r=>!sbIds.has(r.id));
-      const merged=[...sbRows,...localOnly];
-      // Push local-only recipes to Supabase
-      if(localOnly.length>0) sbBatch(localOnly);
-      // Use merged set (or DEMO_R if truly empty)
-      const final=merged.length>0?merged:DEMO_R;
-      setRec(final);
-      try{localStorage.setItem('mep_recipes',JSON.stringify(final));}catch(e){}
-      setSbReady(true);setSbSyncing(false);
-    }).catch(()=>{setSbReady(false);setSbSyncing(false);});
-  },[]);
-  useEffect(()=>{try{localStorage.setItem('mep_recipes',JSON.stringify(recipes));}catch(e){}},[recipes]);
   const[colls,setColls]=useState(DEMO_C);
   const[selId,setSelId]=useState(null);
   const[tab,setTab]=useState("recipe");
@@ -317,30 +335,43 @@ function App(){
   const[prices,setPrices]=useState({});
   const[search,setSearch]=useState("");
   const[catF,setCatF]=useState("");
+  const[editId,setEditId]=useState(null);
+  useEffect(()=>{
+    setSyncing(true);
+    sbLoad().then(sbRows=>{
+      const hidden=new Set(JSON.parse(localStorage.getItem('mep_hidden')||'[]'));
+      const userSb=sbRows.filter(r=>!demoIds.has(r.id));
+      const sbIds=new Set(sbRows.map(r=>r.id));
+      JSON.parse(localStorage.getItem('mep_user')||'[]').filter(r=>!demoIds.has(r.id)&&!sbIds.has(r.id)).forEach(r=>sbUpsert(r));
+      setRec([...DEMO_R.filter(r=>!hidden.has(r.id)),...userSb]);
+      try{localStorage.setItem('mep_user',JSON.stringify(userSb));}catch(e){}
+      setSyncing(false);setSynced(true);
+    }).catch(()=>{setSyncing(false);setSynced(false);});
+  },[]);
+  useEffect(()=>{try{localStorage.setItem('mep_user',JSON.stringify(recipes.filter(r=>!demoIds.has(r.id))));}catch(e){}},[recipes]);
   const sel=recipes.find(r=>r.id===selId);
   const co=COUNTRIES.find(c=>c.code===country)||COUNTRIES[0];
-  const[editId,setEditId]=useState(null);
-  const openR=id=>{setSelId(id);setView("detail");setTab("recipe");setNav("recipes");};
+  const filt=recipes.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())&&(!catF||r.category===catF));
   const goBack=()=>{setView("gallery");setSelId(null);setEditId(null);};
-  const saveR=r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);goBack();if(sbReady)sbUpsert(nr);};
-  const updR=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));if(sbReady)sbUpsert(r);};
-  const forceSyncAll=async(recs)=>{
-    setSbSyncing(true);
-    const realRecs=recs.filter(r=>!DEMO_R.find(d=>d.id===r.id));
-    if(realRecs.length>0) await sbBatch(realRecs);
-    setSbSyncing(false);
-  };
-  const delR=id=>{setRec(p=>p.filter(r=>r.id!==id));goBack();if(sbReady)sbDelete(id);};
+  const openR=id=>{setSelId(id);setView("detail");setTab("recipe");setNav("recipes");};
+  const saveR=r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);if(!demoIds.has(nr.id))sbUpsert(nr);goBack();};
+  const updR=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));if(!demoIds.has(r.id))sbUpsert(r);};
+  const saveEdit=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));if(!demoIds.has(r.id))sbUpsert(r);setView("detail");setEditId(null);};
   const startEdit=id=>{setEditId(id);setSelId(id);setView("edit");};
-  const saveEdit=r=>{setRec(p=>p.map(x=>x.id===r.id?r:x));setView("detail");setEditId(null);if(sbReady)sbUpsert(r);};
+  const delR=id=>{
+    if(demoIds.has(id)){try{const h=JSON.parse(localStorage.getItem('mep_hidden')||'[]');if(!h.includes(id)){h.push(id);localStorage.setItem('mep_hidden',JSON.stringify(h));}}catch(e){}}
+    else sbDelete(id);
+    setRec(p=>p.filter(r=>r.id!==id));
+    setView("gallery");setSelId(null);setEditId(null);
+  };
+  const importR=r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);if(!demoIds.has(nr.id))sbUpsert(nr);};
   const getP=k=>prices[selId]?.[country]?.[k]??"";
   const setP=(k,v)=>setPrices(p=>({...p,[selId]:{...p[selId],[country]:{...p[selId]?.[country],[k]:v}}}));
-  const filt=recipes.filter(r=>r.name.toLowerCase().includes(search.toLowerCase())&&(!catF||r.category===catF));
   return(
     <div style={{fontFamily:FB,background:G.bg,minHeight:"100vh",color:G.text}}>
-      <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")} sbSyncing={sbSyncing} sbReady={sbReady} onRefresh={refreshFromCloud}/>
+      <TopBar nav={nav} setNav={n=>{setNav(n);if(n!=="recipes")setView("gallery");}} view={view} onBack={goBack} recName={sel?.name} onAdd={()=>setView("add")} syncing={syncing} synced={synced}/>
       {nav==="recipes"&&<>
-        {view==="gallery"&&<Gallery recipes={filt} setRec={setRec} onOpen={openR} onAdd={()=>setView("add")} onImport={r=>{const nr={...r,id:r.id||gid()};setRec(p=>[...p,nr]);if(sbReady)sbUpsert(nr);}} onBatch={runBatch} onBatchJSON={runBatchJSON} onEdit={startEdit} onForceSync={()=>forceSyncAll(recipes)} onRefresh={refreshFromCloud} sbSyncing={sbSyncing} sbReady={sbReady} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls}/>}
+        {view==="gallery"&&<Gallery recipes={filt} onOpen={openR} onImport={importR} onEdit={startEdit} onDelete={delR} search={search} setSearch={setSearch} catF={catF} setCatF={setCatF} total={recipes.length} colls={colls} syncing={syncing} synced={synced}/>}
         {view==="detail"&&sel&&<Detail recipe={sel} tab={tab} setTab={setTab} country={country} setCountry={setCtry} co={co} getP={getP} setP={setP} onDelete={()=>delR(sel.id)} colls={colls} onUpdate={updR} onEdit={()=>startEdit(sel.id)}/>}
         {view==="add"&&<AddRecipe onSave={saveR} onCancel={goBack} colls={colls}/>}
         {view==="edit"&&recipes.find(r=>r.id===editId)&&<AddRecipe initialRecipe={recipes.find(r=>r.id===editId)} onSave={saveEdit} onCancel={()=>setView("detail")} colls={colls}/>}
@@ -351,7 +382,6 @@ function App(){
   );
 }
 
-/* ══ TOP BAR ══ */
 function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady,onRefresh}){
   const mob=useMobile();
   const NAV=[["recipes","Recetas","🍽"],["organize","Colecciones","📁"],["lab","Laboratorio","🧪"]];
@@ -368,7 +398,7 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady,onRefres
             {label}
           </button>
         ))}
-        <button onClick={onRefresh} disabled={sbSyncing} title="Actualizar desde la nube" style={{background:"none",border:"none",cursor:sbSyncing?"wait":"pointer",color:sbSyncing?"#F59E0B":G.textMut,fontSize:18,padding:"0 8px",display:"flex",alignItems:"center",lineHeight:1}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=sbSyncing?"#F59E0B":G.textMut}>↻</button>
+        <button onClick={onRefresh||refreshFromCloud} disabled={sbSyncing} title="Actualizar desde la nube" style={{background:"none",border:"none",cursor:sbSyncing?"wait":"pointer",color:sbSyncing?"#F59E0B":G.textMut,fontSize:18,padding:"0 8px",display:"flex",alignItems:"center",lineHeight:1}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=sbSyncing?"#F59E0B":G.textMut}>↻</button>
         {!mob&&nav==="recipes"&&view==="gallery"&&<button onClick={onAdd} style={{...bv("p",{padding:"7px 16px",fontSize:11,fontWeight:700,marginLeft:4})}} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>+ Nueva Receta</button>}
       </nav>
     </header>
@@ -376,7 +406,7 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady,onRefres
 }
 
 /* ══ GALLERY ══ */
-function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onBatch,onBatchJSON,onEdit,onForceSync,sbSyncing,sbReady}){
+function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,colls,onImport,onEdit,onDelete}){
   const[showImport,setShowImport]=useState(false);
   return(
     <div style={{maxWidth:1200,margin:"0 auto",padding:useMobile()?"16px 12px":"48px 32px"}}>
@@ -427,13 +457,10 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
           </div>
           {/* Cloud sync status */}
           <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}>
-            <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:sbSyncing?"#FEF3C7":sbReady?"#ECFDF5":"#F9FAFB",border:`1px solid ${sbSyncing?"#FCD34D":sbReady?"#6EE7B7":"#E5E7EB"}`}}>
-              <span style={{fontSize:13}}>{sbSyncing?"☁️":sbReady?"✅":"💾"}</span>
-              <span style={{fontFamily:FB,fontSize:11,fontWeight:600,color:sbSyncing?"#92400E":sbReady?"#065F46":"#6B7280"}}>
-                {sbSyncing?"Sincronizando con la nube…":sbReady?`Nube sincronizada — ${total} receta${total!==1?"s":""}`:"Guardado solo localmente"}
-              </span>
+            <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:"#F0FDF4",border:"1px solid #6EE7B7"}}>
+              <span style={{fontSize:13}}>✅</span>
+              <span style={{fontFamily:FB,fontSize:11,fontWeight:600,color:"#065F46"}}>{total} receta{total!==1?"s":""} archivadas</span>
             </div>
-            {sbReady&&!sbSyncing&&<button onClick={onForceSync} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:20}),color:G.textMut}} title="Forzar sincronización completa con Supabase" onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>⟳ Forzar sync</button>}
           </div>
         </div>
       </div>
@@ -449,9 +476,9 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
             <p style={{fontFamily:FH,fontSize:22,color:G.text,margin:"0 0 8px",fontWeight:700}}>Sin resultados</p>
             <p style={{fontSize:12}}>Agrega tu primera receta con el botón superior derecho</p>
           </div>
-        :<div style={{display:"grid",gridTemplateColumns:useMobile()?"repeat(2,1fr)":"repeat(auto-fill,minmax(240px,1fr))",gap:20}}>
+        :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:20}}>
             {recipes.map(r=><RecipeCard key={r.id} recipe={r} onOpen={()=>onOpen(r.id)} colls={colls}
-              onEdit={()=>onEdit&&onEdit(r.id)}
+              onDelete={()=>onDelete&&onDelete(r.id)} onEdit={()=>onEdit&&onEdit(r.id)}
               onExport={()=>{const cl={...r,photo:r.photo?"[foto]":null};const b=new Blob([JSON.stringify(cl,null,2)],{type:"application/json"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=r.name.replace(/\s+/g,"-").toLowerCase()+".json";a.click();URL.revokeObjectURL(u);}}
             />)}
           </div>}
@@ -459,7 +486,7 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
   );
 }
 
-function RecipeCard({recipe,onOpen,colls,onEdit,onExport}){
+function RecipeCard({recipe,onOpen,colls,onEdit,onExport,onDelete}){
   const[hov,setHov]=useState(false);
   const[menu,setMenu]=useState(false);
   const cuts=CUTLERY.filter(c=>recipe.cutlery?.includes(c.id)).map(c=>c.icon).join(" ");
@@ -476,6 +503,8 @@ function RecipeCard({recipe,onOpen,colls,onEdit,onExport}){
           <button onClick={()=>{onEdit&&onEdit();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>✏️  Editar</button>
           <div style={{borderTop:`1px solid ${G.brd}`}}/>
           <button onClick={()=>{onExport&&onExport();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.textMid,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>⬇  Exportar JSON</button>
+          <div style={{borderTop:`1px solid ${G.brd}`}}/>
+          <button onClick={()=>{if(window.confirm('¿Eliminar "'+recipe.name+'"?')){onDelete&&onDelete();setMenu(false);}}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.red,textAlign:"left",fontWeight:600}} onMouseOver={e=>e.currentTarget.style.background="#FEF2F2"} onMouseOut={e=>e.currentTarget.style.background="none"}>🗑  Eliminar receta</button>
         </div>
       )}
       {/* Square photo */}
@@ -1255,7 +1284,7 @@ function Organize({recipes,colls,setColls,onOpen}){
   const delColl=id=>setColls(p=>p.filter(c=>c.id!==id));
   const uncollected=recipes.filter(r=>!r.colls||r.colls.length===0);
   return(
-    <div style={{maxWidth:1100,margin:"0 auto",padding:"48px 32px"}}>
+    <div style={{maxWidth:1100,margin:"0 auto",padding:useMobile()?"16px 12px":"48px 32px"}}>
       <p style={{fontFamily:FB,fontSize:10,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Organización</p>
       <h1 style={{fontFamily:FH,fontSize:38,color:G.text,margin:"0 0 4px",fontWeight:700,letterSpacing:-.5}}>Colecciones</h1>
       <p style={{color:G.textMut,fontSize:13,margin:"0 0 32px",fontFamily:FB}}>Organiza tus recetas en carpetas temáticas. Asígnalas desde la vista de detalle de cada receta.</p>
