@@ -1526,6 +1526,10 @@ function PairingsLab({recipes}){
     const rows=await loadPairings(name);
     setPairings(rows);
     setPLoading(false);
+    // Auto-generate if no pairings exist
+    if(rows.length===0){
+      setTimeout(()=>generatePairingsFor(name),100);
+    }
   };
 
   const generatePairings=async()=>{
