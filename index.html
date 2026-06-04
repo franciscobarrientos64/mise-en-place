@@ -588,7 +588,7 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
         </div>
       </div>
       <div style={{display:"flex",borderBottom:`1px solid ${G.brd}`,marginBottom:28}}>
-        {[["recipe","Receta"],["costing","Costeo"]].map(([id,label])=>(
+        {[["recipe","Receta"],["costing","Costeo"],["nutrition","Nutrición"]].map(([id,label])=>(
           <button key={id} onClick={()=>setTab(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:600,padding:"10px 20px",color:tab===id?G.blue:G.textMut,borderBottom:tab===id?`2px solid ${G.blue}`:"2px solid transparent",transition:"all .15s",marginBottom:-1}}>
             {label}
           </button>
@@ -734,6 +734,92 @@ Si no hay cantidad específica usa 1. Unidades válidas: g, kg, ml, l, tsp, tbsp
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+
+/* ══ NUTRICIÓN TAB ══ */
+function NutricionTab({recipe,onUpdate}){
+  const[loading,setLoading]=useState(false);
+  const[error,setError]=useState("");
+  const nutrition=recipe.nutrition||null;
+  const calculate=async()=>{
+    setLoading(true);setError("");
+    try{
+      const allIng=[];
+      (recipe.steps||[]).forEach(s=>(s.ingredients||[]).forEach(i=>allIng.push(i)));
+      if(allIng.length===0){setError("Sin ingredientes estructurados. Usa ✦ Extraer ingredientes primero.");setLoading(false);return;}
+      let tot={kcal:0,protein:0,carbs:0,fat:0,fiber:0};
+      const bd=[];
+      for(const ing of allIng){
+        const data=await usdaLookup(ing.name);
+        const grams=toGrams(ing.quantity||1,ing.unit||"g");
+        if(data){
+          const f=(grams*(ing.yieldPct||100)/100)/100;
+          const row={name:ing.name,grams,kcal:+(data.per100g.kcal*f).toFixed(1),protein:+(data.per100g.protein*f).toFixed(1),carbs:+(data.per100g.carbs*f).toFixed(1),fat:+(data.per100g.fat*f).toFixed(1),fiber:+(data.per100g.fiber*f).toFixed(1),usdaName:data.name};
+          bd.push(row);
+          tot.kcal+=row.kcal;tot.protein+=row.protein;tot.carbs+=row.carbs;tot.fat+=row.fat;tot.fiber+=row.fiber;
+        }else{
+          bd.push({name:ing.name,grams,kcal:0,protein:0,carbs:0,fat:0,fiber:0,usdaName:"No encontrado en USDA"});
+        }
+        await new Promise(r=>setTimeout(r,250));
+      }
+      const por=recipe.portions||1;
+      const pp={kcal:+(tot.kcal/por).toFixed(0),protein:+(tot.protein/por).toFixed(1),carbs:+(tot.carbs/por).toFixed(1),fat:+(tot.fat/por).toFixed(1),fiber:+(tot.fiber/por).toFixed(1)};
+      onUpdate&&onUpdate({...recipe,nutrition:{perPortion:pp,total:tot,breakdown:bd,calculatedAt:new Date().toISOString()}});
+    }catch(e){setError("Error: "+e.message);}
+    setLoading(false);
+  };
+  const n=nutrition?.perPortion;
+  const MACROS=n?[
+    {label:"Calorías",val:n.kcal,unit:"kcal",color:"#EF4444"},
+    {label:"Proteína",val:n.protein,unit:"g",color:"#3B82F6",pct:n.kcal>0?Math.round(n.protein*4*100/n.kcal):0},
+    {label:"Carbs",val:n.carbs,unit:"g",color:"#F59E0B",pct:n.kcal>0?Math.round(n.carbs*4*100/n.kcal):0},
+    {label:"Grasa",val:n.fat,unit:"g",color:"#10B981",pct:n.kcal>0?Math.round(n.fat*9*100/n.kcal):0},
+    {label:"Fibra",val:n.fiber,unit:"g",color:"#8B5CF6"},
+  ]:[];
+  return(
+    <div style={{fontFamily:FB}}>
+      {!nutrition&&!loading&&<div style={{textAlign:"center",padding:"48px 0"}}>
+        <p style={{fontSize:14,color:G.textMut,marginBottom:20}}>Macros y calorías por porción usando USDA FoodData Central (600K+ alimentos)</p>
+        <button onClick={calculate} style={bv("p",{padding:"12px 28px",fontSize:13,borderRadius:8})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>🔬 Calcular nutrición</button>
+      </div>}
+      {loading&&<div style={{textAlign:"center",padding:"48px 0"}}>
+        <p style={{fontSize:13,color:G.textMut}}>Consultando USDA FoodData Central…</p>
+        <p style={{fontSize:11,color:G.brd,marginTop:8}}>Un momento por favor</p>
+      </div>}
+      {error&&<p style={{color:G.red,fontSize:12,padding:"12px 16px",background:"#FEE2E2",borderRadius:8,marginBottom:16}}>{error}</p>}
+      {n&&<div>
+        <div style={{display:"flex",gap:10,marginBottom:20,flexWrap:"wrap"}}>
+          {MACROS.map(m=><div key={m.label} style={{flex:"1 1 90px",background:G.surf,border:`1px solid ${G.brd}`,borderRadius:10,padding:"12px",textAlign:"center"}}>
+            <div style={{fontSize:20,fontWeight:700,color:m.color,fontFamily:FH}}>{m.val}<span style={{fontSize:11,fontWeight:400,color:G.textMut}}>{m.unit}</span></div>
+            <div style={{fontSize:9,color:G.textMut,letterSpacing:.5,textTransform:"uppercase",marginTop:3}}>{m.label}</div>
+            {m.pct!==undefined&&<div style={{fontSize:10,color:m.color}}>{m.pct}%</div>}
+          </div>)}
+        </div>
+        <p style={{fontSize:10,color:G.textMut,marginBottom:12,textAlign:"right"}}>Por porción · {recipe.portions} porciones totales</p>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11,minWidth:480}}>
+            <thead><tr style={{borderBottom:`2px solid ${G.brd}`}}>
+              {["Ingrediente","Match USDA","g","kcal","Prot.","Carb.","Grasa"].map(h=><th key={h} style={{textAlign:"left",padding:"5px 8px",color:G.textMut,fontWeight:600,fontSize:9,textTransform:"uppercase"}}>{h}</th>)}
+            </tr></thead>
+            <tbody>{(nutrition.breakdown||[]).map((r,i)=><tr key={i} style={{borderBottom:`1px solid ${G.brd}`}}>
+              <td style={{padding:"6px 8px",color:G.text,fontWeight:500}}>{r.name}</td>
+              <td style={{padding:"6px 8px",color:G.textMut,fontSize:10,fontStyle:"italic"}}>{r.usdaName}</td>
+              <td style={{padding:"6px 8px",color:G.textMid,textAlign:"right"}}>{Math.round(r.grams)}</td>
+              <td style={{padding:"6px 8px",color:"#EF4444",textAlign:"right",fontWeight:600}}>{r.kcal}</td>
+              <td style={{padding:"6px 8px",color:"#3B82F6",textAlign:"right"}}>{r.protein}g</td>
+              <td style={{padding:"6px 8px",color:"#F59E0B",textAlign:"right"}}>{r.carbs}g</td>
+              <td style={{padding:"6px 8px",color:"#10B981",textAlign:"right"}}>{r.fat}g</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+        <div style={{marginTop:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <p style={{fontSize:10,color:G.textMut}}>Fuente: USDA FoodData Central · {new Date(nutrition.calculatedAt).toLocaleDateString("es-PE")}</p>
+          <button onClick={calculate} disabled={loading} style={bv("ghost",{fontSize:11,padding:"6px 14px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>⟳ Recalcular</button>
+        </div>
+      </div>}
     </div>
   );
 }
@@ -1374,6 +1460,147 @@ const ING_EXTENDED={
   bar:["Champán Brut","Champán Blanc de Blancs","Champán Rosado","Cava Brut Nature","Prosecco","Crémant d'Alsace","Campari","Aperol","Vermouth rojo","Vermouth blanco seco","Noilly Prat","Lillet Blanc","Cocchi Americano","Jerez Fino","Jerez Manzanilla","Jerez Oloroso","Pedro Ximénez","Oporto Ruby","Oporto Tawny","Madera","Angostura bitters","Peychaud's bitters","Chartreuse verde","Chartreuse amarilla","Fernet-Branca"],
 };
 
+
+/* ══ PAIRINGS LAB ══ */
+function PairingsLab(){
+  const[query,setQuery]=useState("");
+  const[results,setResults]=useState(null);  // {ingredient, pairings:[]}
+  const[loading,setLoading]=useState(false);
+  const[genLoading,setGenLoading]=useState(false);
+  const[showAdd,setShowAdd]=useState(false);
+  const[newPair,setNewPair]=useState({pairs_with:"",score:7,compounds:"",notes:""});
+
+  const search=async()=>{
+    if(!query.trim())return;
+    setLoading(true);
+    const rows=await loadPairings(query.trim());
+    setResults({ingredient:query.trim(),pairings:rows});
+    setLoading(false);
+  };
+
+  const generatePairings=async()=>{
+    if(!results)return;
+    setGenLoading(true);
+    try{
+      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1500,
+          system:"Eres un experto en food pairing y química culinaria. Conoces a fondo los libros de Niki Segnit (The Flavour Thesaurus) y François Chartier (Papilles et Molécules), y la investigación de FlavorGraph (Park et al., Nature 2021). Responde SOLO con JSON válido, sin texto extra.",
+          messages:[{role:"user",content:`Genera los 10 mejores pairings para: "${results.ingredient}"
+
+Incluye maridajes clásicos, sorprendentes y basados en compuestos químicos compartidos. Responde SOLO este JSON:
+[{"pairs_with":"nombre","score":8,"compounds":["compuesto1","compuesto2"],"notes":"explicación breve en español"}]`}]})});
+      const data=await res.json();
+      const raw=(data.content?.[0]?.text||"").replace(/\`\`\`json\n?|\`\`\`\n?/g,"").trim();
+      const m=raw.match(/\[[\s\S]*\]/);
+      const pairings=JSON.parse(m?m[0]:raw);
+      // Save to Supabase
+      for(const p of pairings){
+        await savePairing({...p,ingredient:results.ingredient,compounds:p.compounds||[],source:"ai"});
+      }
+      const fresh=await loadPairings(results.ingredient);
+      setResults({...results,pairings:fresh});
+    }catch(e){alert("Error generando pairings: "+e.message);}
+    setGenLoading(false);
+  };
+
+  const addManual=async()=>{
+    if(!newPair.pairs_with.trim()||!results)return;
+    await savePairing({ingredient:results.ingredient,pairs_with:newPair.pairs_with.trim(),score:+newPair.score,compounds:newPair.compounds?newPair.compounds.split(",").map(s=>s.trim()).filter(Boolean):[],notes:newPair.notes,source:"user"});
+    const fresh=await loadPairings(results.ingredient);
+    setResults({...results,pairings:fresh});
+    setNewPair({pairs_with:"",score:7,compounds:"",notes:""});
+    setShowAdd(false);
+  };
+
+  const SCORE_STARS=s=>["★","★","★","★","★"].map((st,i)=><span key={i} style={{color:i<Math.round(s/2)?"#F59E0B":"#E5E7EB"}}>{st}</span>);
+
+  return(
+    <div style={{fontFamily:FB,maxWidth:800,margin:"0 auto"}}>
+      <h2 style={{fontFamily:FH,fontSize:22,color:G.text,marginBottom:6}}>Food Pairing Lab</h2>
+      <p style={{fontSize:12,color:G.textMut,marginBottom:24}}>Descubre qué ingredientes combinan científicamente. Basado en FlavorGraph (Nature 2021), Segnit y Chartier.</p>
+
+      {/* Search */}
+      <div style={{display:"flex",gap:10,marginBottom:24}}>
+        <input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&search()}
+          placeholder="Escribe un ingrediente (ej: salmón, limón, chocolate...)"
+          style={{...inp({flex:1,fontSize:13,padding:"10px 14px"}),borderRadius:8}}
+          onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+        <button onClick={search} disabled={loading} style={bv("p",{padding:"10px 20px",fontSize:13,borderRadius:8})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+          {loading?"…":"Buscar"}
+        </button>
+      </div>
+
+      {/* Results */}
+      {results&&(
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <h3 style={{fontFamily:FH,fontSize:17,color:G.text,margin:0}}>
+              Pairings para <span style={{color:G.blue}}>{results.ingredient}</span>
+              <span style={{fontSize:12,color:G.textMut,fontFamily:FB,fontWeight:400,marginLeft:8}}>({results.pairings.length} encontrados)</span>
+            </h3>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setShowAdd(p=>!p)} style={bv("ghost",{fontSize:11,padding:"6px 14px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
+                + Agregar pairing
+              </button>
+              <button onClick={generatePairings} disabled={genLoading} style={bv("p",{fontSize:11,padding:"6px 14px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                {genLoading?"Generando…":"✦ Generar con IA"}
+              </button>
+            </div>
+          </div>
+
+          {/* Add manual pairing */}
+          {showAdd&&(
+            <div style={{background:G.surf,border:`1px solid ${G.brd}`,borderRadius:10,padding:"16px",marginBottom:16}}>
+              <p style={{fontSize:11,fontWeight:700,color:G.text,marginBottom:12}}>Nuevo pairing manual</p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 80px",gap:10,marginBottom:10}}>
+                <input value={newPair.pairs_with} onChange={e=>setNewPair(p=>({...p,pairs_with:e.target.value}))} placeholder="Ingrediente que combina" style={inp({fontSize:12,padding:"7px 10px"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                <input type="number" min="1" max="10" value={newPair.score} onChange={e=>setNewPair(p=>({...p,score:e.target.value}))} placeholder="Score 1-10" style={inp({fontSize:12,padding:"7px 10px"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+              </div>
+              <input value={newPair.compounds} onChange={e=>setNewPair(p=>({...p,compounds:e.target.value}))} placeholder="Compuestos compartidos (separados por coma, opcional)" style={{...inp({fontSize:12,padding:"7px 10px",width:"100%",boxSizing:"border-box"}),marginBottom:10}} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+              <input value={newPair.notes} onChange={e=>setNewPair(p=>({...p,notes:e.target.value}))} placeholder="Notas (opcional)" style={{...inp({fontSize:12,padding:"7px 10px",width:"100%",boxSizing:"border-box"}),marginBottom:12}} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={addManual} style={bv("p",{fontSize:12,padding:"7px 16px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>Guardar</button>
+                <button onClick={()=>setShowAdd(false)} style={bv("ghost",{fontSize:12,padding:"7px 16px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>Cancelar</button>
+              </div>
+            </div>
+          )}
+
+          {results.pairings.length===0?(
+            <div style={{textAlign:"center",padding:"32px",background:G.surf,borderRadius:10,border:`1px solid ${G.brd}`}}>
+              <p style={{fontSize:13,color:G.textMut,marginBottom:16}}>No hay pairings guardados aún para este ingrediente.</p>
+              <button onClick={generatePairings} disabled={genLoading} style={bv("p",{padding:"10px 24px",fontSize:13,borderRadius:8})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                {genLoading?"Generando…":"✦ Generar pairings con IA"}
+              </button>
+            </div>
+          ):(
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {results.pairings.map(p=>(
+                <div key={p.id} style={{background:G.w,border:`1px solid ${G.brd}`,borderRadius:10,padding:"14px 16px",display:"flex",gap:16,alignItems:"flex-start"}}>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+                      <span style={{fontFamily:FH,fontSize:16,color:G.text,fontWeight:700}}>{p.pairs_with}</span>
+                      <span style={{fontSize:14}}>{SCORE_STARS(p.score)}</span>
+                      <span style={{fontSize:10,color:G.textMut,background:G.surf,padding:"2px 8px",borderRadius:10,border:`1px solid ${G.brd}`}}>{p.source==="user"?"👤 Manual":"✦ IA"}</span>
+                    </div>
+                    {p.compounds?.length>0&&<p style={{fontSize:11,color:G.blue,margin:"0 0 4px"}}>🧪 {p.compounds.join(" · ")}</p>}
+                    {p.notes&&<p style={{fontSize:12,color:G.textMid,margin:0}}>{p.notes}</p>}
+                  </div>
+                  <div style={{fontSize:18,fontWeight:700,color:p.score>=8?"#10B981":p.score>=6?"#F59E0B":"#6B7280",flexShrink:0,minWidth:28,textAlign:"center"}}>{p.score}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!results&&<div style={{textAlign:"center",padding:"64px 0",color:G.textMut}}>
+        <p style={{fontSize:14}}>🔬 Busca un ingrediente para ver sus pairings científicos</p>
+        <p style={{fontSize:11,marginTop:8}}>Los pairings se guardan en tu base de datos y mejoran con el uso</p>
+      </div>}
+    </div>
+  );
+}
+
 function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
   const[labTab,setLabTab]=useState("wheel"); // wheel | need
   const[selected,setSelected]=useState([]);
@@ -1509,7 +1736,7 @@ function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
           </h1>
           {/* Main tabs */}
           <div style={{display:"flex",gap:0,background:G.surf,borderRadius:8,padding:3}}>
-            {[["wheel","🎯 Rueda Aromática"],["need","💡 Desde la Necesidad"]].map(([id,label])=>(
+            {[["wheel","🎯 Rueda Aromática"],["need","💡 Desde la Necesidad"],["pairings","🔬 Pairings"]].map(([id,label])=>(
               <button key={id} onClick={()=>setLabTab(id)} style={{padding:"8px 16px",border:"none",borderRadius:6,background:labTab===id?G.w:"transparent",color:labTab===id?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:labTab===id?700:400,boxShadow:labTab===id?"0 1px 4px rgba(0,0,0,.08)":"none",transition:"all .15s"}}>
                 {label}
               </button>
@@ -1520,6 +1747,7 @@ function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
 
       {/* ── PESTAÑA: DESDE LA NECESIDAD ── */}
       {labTab==="need"&&<NecesidadLab onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>}
+      {labTab==="pairings"&&<PairingsLab/>}
 
       {/* ── PESTAÑA: RUEDA AROMÁTICA ── */}
       {labTab==="wheel"&&<>
