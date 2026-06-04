@@ -40,6 +40,9 @@ const sbLoad  = async()=>{ const r=await fetch(SB_URL+'/recipes?select=*&order=c
 const sbUpsert  = async(recipe)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipe)});
 const sbBatch   = async(recipes)=>fetch(SB_URL+'/recipes',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(recipes)});
 const sbDelete= async(id)=>fetch(SB_URL+'/recipes?id=eq.'+id,{method:'DELETE',headers:SB_H()});
+const loadIngredients=async()=>{const r=await fetch(SB_URL+'/ingredients?select=name,category,season,origin&order=name.asc&limit=1000',{headers:SB_H()});return r.ok?await r.json():[];};
+const loadPairings=async(ingredient)=>{const r=await fetch(SB_URL+'/flavor_pairings?ingredient=ilike.'+encodeURIComponent(ingredient)+'&order=score.desc&limit=50',{headers:SB_H()});return r.ok?await r.json():[];};
+const savePairing=async(p)=>fetch(SB_URL+'/flavor_pairings',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(p)});
 
 /* ══ TOKENS ══ */
 const G = {
