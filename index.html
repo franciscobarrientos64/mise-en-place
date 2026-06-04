@@ -1464,101 +1464,15 @@ const ING_EXTENDED={
 /* ══ PAIRINGS LAB ══ */
 
 function PairingsLab({recipes}){
-  const MONTH = new Date().getMonth()+1; // 1-12, currently June=6
-
-  // ── Ingredient database (Peru / chef context) ──────────────────────
-  // season: months in season, [] = year-round
-  const INGS = [
-    // Proteínas
-    {name:"Pollo",cat:"Proteína",season:[]},
-    {name:"Res",cat:"Proteína",season:[]},
-    {name:"Cerdo",cat:"Proteína",season:[]},
-    {name:"Cordero",cat:"Proteína",season:[5,6,7,8]},
-    {name:"Pato",cat:"Proteína",season:[4,5,6,7,8,9]},
-    {name:"Conejo",cat:"Proteína",season:[4,5,6,7,8]},
-    {name:"Trucha",cat:"Proteína",season:[]},
-    {name:"Corvina",cat:"Proteína",season:[10,11,12,1,2,3]},
-    {name:"Lenguado",cat:"Proteína",season:[10,11,12,1,2,3]},
-    {name:"Pulpo",cat:"Proteína",season:[]},
-    {name:"Camarones",cat:"Proteína",season:[12,1,2,3,4]},
-    {name:"Langostinos",cat:"Proteína",season:[]},
-    {name:"Cangrejo",cat:"Proteína",season:[5,6,7,8,9]},
-    {name:"Huevo",cat:"Proteína",season:[]},
-    {name:"Atún",cat:"Proteína",season:[11,12,1,2]},
-    {name:"Salmón",cat:"Proteína",season:[]},
-    // Frutas
-    {name:"Palta",cat:"Fruta",season:[3,4,5,6,7,8]},
-    {name:"Mango",cat:"Fruta",season:[11,12,1,2,3]},
-    {name:"Maracuyá",cat:"Fruta",season:[3,4,5,6,7,8,9]},
-    {name:"Fresa",cat:"Fruta",season:[9,10,11,12,1,2]},
-    {name:"Lúcuma",cat:"Fruta",season:[4,5,6,7,8,9]},
-    {name:"Chirimoya",cat:"Fruta",season:[5,6,7,8,9]},
-    {name:"Guanábana",cat:"Fruta",season:[12,1,2,3,4]},
-    {name:"Papaya",cat:"Fruta",season:[11,12,1,2,3,4]},
-    {name:"Piña",cat:"Fruta",season:[11,12,1,2,3]},
-    {name:"Durazno",cat:"Fruta",season:[11,12,1,2]},
-    {name:"Naranja",cat:"Cítrico",season:[5,6,7,8,9,10]},
-    {name:"Mandarina",cat:"Cítrico",season:[5,6,7,8,9]},
-    {name:"Limón sutil",cat:"Cítrico",season:[]},
-    {name:"Lima",cat:"Cítrico",season:[]},
-    {name:"Toronja",cat:"Cítrico",season:[5,6,7,8]},
-    // Verduras
-    {name:"Tomate",cat:"Verdura",season:[11,12,1,2,3]},
-    {name:"Cebolla",cat:"Verdura",season:[]},
-    {name:"Ajo",cat:"Verdura",season:[]},
-    {name:"Zanahoria",cat:"Verdura",season:[]},
-    {name:"Apio",cat:"Verdura",season:[]},
-    {name:"Poro",cat:"Verdura",season:[5,6,7,8,9,10]},
-    {name:"Espinaca",cat:"Verdura",season:[4,5,6,7,8,9]},
-    {name:"Brócoli",cat:"Verdura",season:[4,5,6,7,8,9,10]},
-    {name:"Coliflor",cat:"Verdura",season:[5,6,7,8,9,10]},
-    {name:"Zapallo",cat:"Verdura",season:[3,4,5,6,7,8]},
-    {name:"Choclo",cat:"Verdura",season:[12,1,2,3,4]},
-    {name:"Habas",cat:"Legumbre",season:[5,6,7,8]},
-    {name:"Arveja",cat:"Legumbre",season:[4,5,6,7,8,9]},
-    {name:"Espárrago",cat:"Verdura",season:[9,10,11,12,1]},
-    // Ajíes
-    {name:"Ají amarillo",cat:"Ají",season:[]},
-    {name:"Ají panca",cat:"Ají",season:[]},
-    {name:"Rocoto",cat:"Ají",season:[4,5,6,7,8,9]},
-    {name:"Ají mirasol",cat:"Ají",season:[]},
-    {name:"Ají limo",cat:"Ají",season:[12,1,2,3,4]},
-    // Tubérculos
-    {name:"Papa amarilla",cat:"Tubérculo",season:[]},
-    {name:"Papa blanca",cat:"Tubérculo",season:[]},
-    {name:"Camote",cat:"Tubérculo",season:[3,4,5,6,7,8,9]},
-    {name:"Yuca",cat:"Tubérculo",season:[]},
-    {name:"Olluco",cat:"Tubérculo",season:[5,6,7,8]},
-    {name:"Oca",cat:"Tubérculo",season:[5,6,7,8]},
-    // Cereales y granos
-    {name:"Arroz",cat:"Cereal",season:[]},
-    {name:"Quinoa",cat:"Cereal",season:[]},
-    {name:"Kiwicha",cat:"Cereal",season:[]},
-    {name:"Maíz morado",cat:"Cereal",season:[5,6,7,8,9]},
-    // Lácteos y otros
-    {name:"Mantequilla",cat:"Lácteo",season:[]},
-    {name:"Crema de leche",cat:"Lácteo",season:[]},
-    {name:"Queso fresco",cat:"Lácteo",season:[]},
-    {name:"Parmesano",cat:"Lácteo",season:[]},
-    // Hierbas y especias
-    {name:"Culantro",cat:"Hierba",season:[]},
-    {name:"Perejil",cat:"Hierba",season:[]},
-    {name:"Huacatay",cat:"Hierba",season:[]},
-    {name:"Orégano",cat:"Hierba",season:[]},
-    {name:"Romero",cat:"Hierba",season:[]},
-    {name:"Tomillo",cat:"Hierba",season:[]},
-    {name:"Albahaca",cat:"Hierba",season:[11,12,1,2,3]},
-    {name:"Canela",cat:"Especia",season:[]},
-    {name:"Comino",cat:"Especia",season:[]},
-    {name:"Pimienta negra",cat:"Especia",season:[]},
-    {name:"Cúrcuma",cat:"Especia",season:[]},
-    // Otros
-    {name:"Aceituna",cat:"Otro",season:[]},
-    {name:"Alcaparras",cat:"Otro",season:[]},
-    {name:"Chocolate",cat:"Otro",season:[]},
-    {name:"Miel",cat:"Otro",season:[]},
-    {name:"Aceite de oliva",cat:"Grasa",season:[]},
-  ];
+  const MONTH=new Date().getMonth()+1;
+  const[INGS,setINGS]=useState([]);
+  const[ingsLoading,setIngsLoading]=useState(true);
+  useEffect(()=>{
+    loadIngredients().then(rows=>{
+      setINGS(rows.map(r=>({name:r.name,cat:r.category,season:r.season||[],origin:r.origin||"global"})));
+      setIngsLoading(false);
+    }).catch(()=>setIngsLoading(false));
+  },[]);
 
   const getSeasonStatus = (season) => {
     if(season.length===0) return "year_round";
@@ -1684,7 +1598,8 @@ function PairingsLab({recipes}){
 
           {/* Ingredient grid */}
           <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:mob?260:580,overflowY:"auto",paddingRight:4}}>
-            {displayed.map(ing=>{
+            {ingsLoading&&<p style={{fontSize:12,color:G.textMut,textAlign:"center",padding:16}}>Cargando ingredientes…</p>}
+          {!ingsLoading&&displayed.map(ing=>{
               const status=getSeasonStatus(ing.season);
               const meta=SEASON_META[status];
               const usage=getUsage(ing.name);
