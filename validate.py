@@ -56,6 +56,12 @@ def validate(path):
         if abs(opens - closes) > 8:
             errors.append(f"DEMO_R BRACKET IMBALANCE: {opens} opens vs {closes} closes")
 
+    # ── 5. Required global functions ─────────────────────────────────────
+    REQUIRED_GLOBALS = ['loadIngredients','loadPairings','savePairing','sbBatch','sbUpsert','sbLoad','gid']
+    for fn in REQUIRED_GLOBALS:
+        if fn not in script:
+            errors.append(f"MISSING_GLOBAL '{fn}' — function not defined in script")
+
     # ── Result ─────────────────────────────────────────────────────────
     lines = len(script.splitlines())
     if errors:
