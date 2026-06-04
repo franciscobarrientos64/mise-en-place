@@ -1462,144 +1462,345 @@ const ING_EXTENDED={
 
 
 /* ══ PAIRINGS LAB ══ */
-function PairingsLab(){
-  const[query,setQuery]=useState("");
-  const[results,setResults]=useState(null);  // {ingredient, pairings:[]}
-  const[loading,setLoading]=useState(false);
+
+function PairingsLab({recipes}){
+  const MONTH = new Date().getMonth()+1; // 1-12, currently June=6
+
+  // ── Ingredient database (Peru / chef context) ──────────────────────
+  // season: months in season, [] = year-round
+  const INGS = [
+    // Proteínas
+    {name:"Pollo",cat:"Proteína",season:[]},
+    {name:"Res",cat:"Proteína",season:[]},
+    {name:"Cerdo",cat:"Proteína",season:[]},
+    {name:"Cordero",cat:"Proteína",season:[5,6,7,8]},
+    {name:"Pato",cat:"Proteína",season:[4,5,6,7,8,9]},
+    {name:"Conejo",cat:"Proteína",season:[4,5,6,7,8]},
+    {name:"Trucha",cat:"Proteína",season:[]},
+    {name:"Corvina",cat:"Proteína",season:[10,11,12,1,2,3]},
+    {name:"Lenguado",cat:"Proteína",season:[10,11,12,1,2,3]},
+    {name:"Pulpo",cat:"Proteína",season:[]},
+    {name:"Camarones",cat:"Proteína",season:[12,1,2,3,4]},
+    {name:"Langostinos",cat:"Proteína",season:[]},
+    {name:"Cangrejo",cat:"Proteína",season:[5,6,7,8,9]},
+    {name:"Huevo",cat:"Proteína",season:[]},
+    {name:"Atún",cat:"Proteína",season:[11,12,1,2]},
+    {name:"Salmón",cat:"Proteína",season:[]},
+    // Frutas
+    {name:"Palta",cat:"Fruta",season:[3,4,5,6,7,8]},
+    {name:"Mango",cat:"Fruta",season:[11,12,1,2,3]},
+    {name:"Maracuyá",cat:"Fruta",season:[3,4,5,6,7,8,9]},
+    {name:"Fresa",cat:"Fruta",season:[9,10,11,12,1,2]},
+    {name:"Lúcuma",cat:"Fruta",season:[4,5,6,7,8,9]},
+    {name:"Chirimoya",cat:"Fruta",season:[5,6,7,8,9]},
+    {name:"Guanábana",cat:"Fruta",season:[12,1,2,3,4]},
+    {name:"Papaya",cat:"Fruta",season:[11,12,1,2,3,4]},
+    {name:"Piña",cat:"Fruta",season:[11,12,1,2,3]},
+    {name:"Durazno",cat:"Fruta",season:[11,12,1,2]},
+    {name:"Naranja",cat:"Cítrico",season:[5,6,7,8,9,10]},
+    {name:"Mandarina",cat:"Cítrico",season:[5,6,7,8,9]},
+    {name:"Limón sutil",cat:"Cítrico",season:[]},
+    {name:"Lima",cat:"Cítrico",season:[]},
+    {name:"Toronja",cat:"Cítrico",season:[5,6,7,8]},
+    // Verduras
+    {name:"Tomate",cat:"Verdura",season:[11,12,1,2,3]},
+    {name:"Cebolla",cat:"Verdura",season:[]},
+    {name:"Ajo",cat:"Verdura",season:[]},
+    {name:"Zanahoria",cat:"Verdura",season:[]},
+    {name:"Apio",cat:"Verdura",season:[]},
+    {name:"Poro",cat:"Verdura",season:[5,6,7,8,9,10]},
+    {name:"Espinaca",cat:"Verdura",season:[4,5,6,7,8,9]},
+    {name:"Brócoli",cat:"Verdura",season:[4,5,6,7,8,9,10]},
+    {name:"Coliflor",cat:"Verdura",season:[5,6,7,8,9,10]},
+    {name:"Zapallo",cat:"Verdura",season:[3,4,5,6,7,8]},
+    {name:"Choclo",cat:"Verdura",season:[12,1,2,3,4]},
+    {name:"Habas",cat:"Legumbre",season:[5,6,7,8]},
+    {name:"Arveja",cat:"Legumbre",season:[4,5,6,7,8,9]},
+    {name:"Espárrago",cat:"Verdura",season:[9,10,11,12,1]},
+    // Ajíes
+    {name:"Ají amarillo",cat:"Ají",season:[]},
+    {name:"Ají panca",cat:"Ají",season:[]},
+    {name:"Rocoto",cat:"Ají",season:[4,5,6,7,8,9]},
+    {name:"Ají mirasol",cat:"Ají",season:[]},
+    {name:"Ají limo",cat:"Ají",season:[12,1,2,3,4]},
+    // Tubérculos
+    {name:"Papa amarilla",cat:"Tubérculo",season:[]},
+    {name:"Papa blanca",cat:"Tubérculo",season:[]},
+    {name:"Camote",cat:"Tubérculo",season:[3,4,5,6,7,8,9]},
+    {name:"Yuca",cat:"Tubérculo",season:[]},
+    {name:"Olluco",cat:"Tubérculo",season:[5,6,7,8]},
+    {name:"Oca",cat:"Tubérculo",season:[5,6,7,8]},
+    // Cereales y granos
+    {name:"Arroz",cat:"Cereal",season:[]},
+    {name:"Quinoa",cat:"Cereal",season:[]},
+    {name:"Kiwicha",cat:"Cereal",season:[]},
+    {name:"Maíz morado",cat:"Cereal",season:[5,6,7,8,9]},
+    // Lácteos y otros
+    {name:"Mantequilla",cat:"Lácteo",season:[]},
+    {name:"Crema de leche",cat:"Lácteo",season:[]},
+    {name:"Queso fresco",cat:"Lácteo",season:[]},
+    {name:"Parmesano",cat:"Lácteo",season:[]},
+    // Hierbas y especias
+    {name:"Culantro",cat:"Hierba",season:[]},
+    {name:"Perejil",cat:"Hierba",season:[]},
+    {name:"Huacatay",cat:"Hierba",season:[]},
+    {name:"Orégano",cat:"Hierba",season:[]},
+    {name:"Romero",cat:"Hierba",season:[]},
+    {name:"Tomillo",cat:"Hierba",season:[]},
+    {name:"Albahaca",cat:"Hierba",season:[11,12,1,2,3]},
+    {name:"Canela",cat:"Especia",season:[]},
+    {name:"Comino",cat:"Especia",season:[]},
+    {name:"Pimienta negra",cat:"Especia",season:[]},
+    {name:"Cúrcuma",cat:"Especia",season:[]},
+    // Otros
+    {name:"Aceituna",cat:"Otro",season:[]},
+    {name:"Alcaparras",cat:"Otro",season:[]},
+    {name:"Chocolate",cat:"Otro",season:[]},
+    {name:"Miel",cat:"Otro",season:[]},
+    {name:"Aceite de oliva",cat:"Grasa",season:[]},
+  ];
+
+  const getSeasonStatus = (season) => {
+    if(season.length===0) return "year_round";
+    return season.includes(MONTH) ? "in_season" : "out_season";
+  };
+
+  const SEASON_META = {
+    in_season:  {icon:"🌱", label:"En temporada",    color:"#059669", bg:"#ECFDF5", border:"#6EE7B7"},
+    year_round: {icon:"♾️", label:"Atemporal",        color:"#6366F1", bg:"#EEF2FF", border:"#A5B4FC"},
+    out_season: {icon:"🌙", label:"Fuera de temporada",color:"#9CA3AF", bg:"#F9FAFB", border:"#E5E7EB"},
+  };
+
+  // ── Count ingredient usage from user recipes ───────────────────────
+  const usageCount = React.useMemo(()=>{
+    const counts = {};
+    (recipes||[]).forEach(r=>(r.steps||[]).forEach(s=>(s.ingredients||[]).forEach(ing=>{
+      const key=ing.name.toLowerCase().trim();
+      counts[key]=(counts[key]||0)+1;
+    })));
+    return counts;
+  },[recipes]);
+
+  const getUsage = (name) => usageCount[name.toLowerCase().trim()]||0;
+
+  // ── State ──────────────────────────────────────────────────────────
+  const[filter,setFilter]=useState("all");        // all | in_season | year_round | out_season
+  const[catFilter,setCatFilter]=useState("all");
+  const[searchQ,setSearchQ]=useState("");
+  const[selected,setSelected]=useState(null);     // selected ingredient for pairings
+  const[pairings,setPairings]=useState([]);
+  const[pLoading,setPLoading]=useState(false);
   const[genLoading,setGenLoading]=useState(false);
   const[showAdd,setShowAdd]=useState(false);
   const[newPair,setNewPair]=useState({pairs_with:"",score:7,compounds:"",notes:""});
 
-  const search=async()=>{
-    if(!query.trim())return;
-    setLoading(true);
-    const rows=await loadPairings(query.trim());
-    setResults({ingredient:query.trim(),pairings:rows});
-    setLoading(false);
+  // ── Filter ingredients ─────────────────────────────────────────────
+  const cats = ["all",...[...new Set(INGS.map(i=>i.cat))]];
+  const displayed = INGS
+    .filter(i=> filter==="all" || getSeasonStatus(i.season)===filter)
+    .filter(i=> catFilter==="all" || i.cat===catFilter)
+    .filter(i=> !searchQ || i.name.toLowerCase().includes(searchQ.toLowerCase()))
+    .sort((a,b)=> getUsage(b.name)-getUsage(a.name) || a.name.localeCompare(b.name,"es"));
+
+  // ── Load pairings for selected ingredient ──────────────────────────
+  const selectIngredient = async(name)=>{
+    setSelected(name);
+    setPLoading(true);
+    const rows=await loadPairings(name);
+    setPairings(rows);
+    setPLoading(false);
   };
 
   const generatePairings=async()=>{
-    if(!results)return;
+    if(!selected)return;
     setGenLoading(true);
     try{
       const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
         body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1500,
-          system:"Eres un experto en food pairing y química culinaria. Conoces a fondo los libros de Niki Segnit (The Flavour Thesaurus) y François Chartier (Papilles et Molécules), y la investigación de FlavorGraph (Park et al., Nature 2021). Responde SOLO con JSON válido, sin texto extra.",
-          messages:[{role:"user",content:`Genera los 10 mejores pairings para: "${results.ingredient}"
-
-Incluye maridajes clásicos, sorprendentes y basados en compuestos químicos compartidos. Responde SOLO este JSON:
-[{"pairs_with":"nombre","score":8,"compounds":["compuesto1","compuesto2"],"notes":"explicación breve en español"}]`}]})});
+          system:"Eres experto en food pairing y química culinaria. Conoces a fondo Niki Segnit (The Flavour Thesaurus), François Chartier (Papilles et Molécules) y FlavorGraph (Nature 2021). Responde SOLO con JSON válido.",
+          messages:[{role:"user",content:"Genera los 10 mejores food pairings para: \""+selected+"\"\n\nIncluye pairings clásicos, sorprendentes y basados en compuestos químicos compartidos. Prioriza ingredientes usados en cocina peruana y latinoamericana. Responde SOLO este JSON:\n[{\"pairs_with\":\"nombre\",\"score\":8,\"compounds\":[\"compuesto1\",\"compuesto2\"],\"notes\":\"explicación breve en español\"}]"}]})});
       const data=await res.json();
-      const raw=(data.content?.[0]?.text||"").replace(/\`\`\`json\n?|\`\`\`\n?/g,"").trim();
+      const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
       const m=raw.match(/\[[\s\S]*\]/);
-      const pairings=JSON.parse(m?m[0]:raw);
-      // Save to Supabase
-      for(const p of pairings){
-        await savePairing({...p,ingredient:results.ingredient,compounds:p.compounds||[],source:"ai"});
-      }
-      const fresh=await loadPairings(results.ingredient);
-      setResults({...results,pairings:fresh});
-    }catch(e){alert("Error generando pairings: "+e.message);}
+      const ps=JSON.parse(m?m[0]:raw);
+      for(const p of ps) await savePairing({...p,ingredient:selected,compounds:p.compounds||[],source:"ai"});
+      const fresh=await loadPairings(selected);
+      setPairings(fresh);
+    }catch(e){alert("Error: "+e.message);}
     setGenLoading(false);
   };
 
   const addManual=async()=>{
-    if(!newPair.pairs_with.trim()||!results)return;
-    await savePairing({ingredient:results.ingredient,pairs_with:newPair.pairs_with.trim(),score:+newPair.score,compounds:newPair.compounds?newPair.compounds.split(",").map(s=>s.trim()).filter(Boolean):[],notes:newPair.notes,source:"user"});
-    const fresh=await loadPairings(results.ingredient);
-    setResults({...results,pairings:fresh});
+    if(!newPair.pairs_with.trim()||!selected)return;
+    await savePairing({ingredient:selected,pairs_with:newPair.pairs_with.trim(),score:+newPair.score,compounds:newPair.compounds?newPair.compounds.split(",").map(s=>s.trim()).filter(Boolean):[],notes:newPair.notes,source:"user"});
+    const fresh=await loadPairings(selected);
+    setPairings(fresh);
     setNewPair({pairs_with:"",score:7,compounds:"",notes:""});
     setShowAdd(false);
   };
 
-  const SCORE_STARS=s=>["★","★","★","★","★"].map((st,i)=><span key={i} style={{color:i<Math.round(s/2)?"#F59E0B":"#E5E7EB"}}>{st}</span>);
+  const MONTHS_ES=["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const mob=useMobile();
 
   return(
-    <div style={{fontFamily:FB,maxWidth:800,margin:"0 auto"}}>
-      <h2 style={{fontFamily:FH,fontSize:22,color:G.text,marginBottom:6}}>Food Pairing Lab</h2>
-      <p style={{fontSize:12,color:G.textMut,marginBottom:24}}>Descubre qué ingredientes combinan científicamente. Basado en FlavorGraph (Nature 2021), Segnit y Chartier.</p>
+    <div style={{fontFamily:FB,maxWidth:1100,margin:"0 auto"}}>
+      <div style={{display:"flex",gap:mob?12:28,alignItems:"flex-start",flexDirection:mob?"column":"row"}}>
 
-      {/* Search */}
-      <div style={{display:"flex",gap:10,marginBottom:24}}>
-        <input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&search()}
-          placeholder="Escribe un ingrediente (ej: salmón, limón, chocolate...)"
-          style={{...inp({flex:1,fontSize:13,padding:"10px 14px"}),borderRadius:8}}
-          onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
-        <button onClick={search} disabled={loading} style={bv("p",{padding:"10px 20px",fontSize:13,borderRadius:8})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
-          {loading?"…":"Buscar"}
-        </button>
-      </div>
+        {/* ── LEFT: Ingredient browser ────────────────────────────── */}
+        <div style={{flex:"0 0 auto",width:mob?"100%":340}}>
+          <h3 style={{fontFamily:FH,fontSize:16,color:G.text,margin:"0 0 14px"}}>Ingredientes</h3>
 
-      {/* Results */}
-      {results&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <h3 style={{fontFamily:FH,fontSize:17,color:G.text,margin:0}}>
-              Pairings para <span style={{color:G.blue}}>{results.ingredient}</span>
-              <span style={{fontSize:12,color:G.textMut,fontFamily:FB,fontWeight:400,marginLeft:8}}>({results.pairings.length} encontrados)</span>
-            </h3>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setShowAdd(p=>!p)} style={bv("ghost",{fontSize:11,padding:"6px 14px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
-                + Agregar pairing
-              </button>
-              <button onClick={generatePairings} disabled={genLoading} style={bv("p",{fontSize:11,padding:"6px 14px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
-                {genLoading?"Generando…":"✦ Generar con IA"}
-              </button>
-            </div>
+          {/* Season legend */}
+          <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap"}}>
+            {Object.entries(SEASON_META).map(([k,m])=>(
+              <div key={k} style={{display:"flex",alignItems:"center",gap:3,fontSize:9,color:m.color,fontWeight:600}}>
+                <span>{m.icon}</span><span>{m.label}</span>
+              </div>
+            ))}
           </div>
 
-          {/* Add manual pairing */}
-          {showAdd&&(
-            <div style={{background:G.surf,border:`1px solid ${G.brd}`,borderRadius:10,padding:"16px",marginBottom:16}}>
-              <p style={{fontSize:11,fontWeight:700,color:G.text,marginBottom:12}}>Nuevo pairing manual</p>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 80px",gap:10,marginBottom:10}}>
-                <input value={newPair.pairs_with} onChange={e=>setNewPair(p=>({...p,pairs_with:e.target.value}))} placeholder="Ingrediente que combina" style={inp({fontSize:12,padding:"7px 10px"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
-                <input type="number" min="1" max="10" value={newPair.score} onChange={e=>setNewPair(p=>({...p,score:e.target.value}))} placeholder="Score 1-10" style={inp({fontSize:12,padding:"7px 10px"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
-              </div>
-              <input value={newPair.compounds} onChange={e=>setNewPair(p=>({...p,compounds:e.target.value}))} placeholder="Compuestos compartidos (separados por coma, opcional)" style={{...inp({fontSize:12,padding:"7px 10px",width:"100%",boxSizing:"border-box"}),marginBottom:10}} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
-              <input value={newPair.notes} onChange={e=>setNewPair(p=>({...p,notes:e.target.value}))} placeholder="Notas (opcional)" style={{...inp({fontSize:12,padding:"7px 10px",width:"100%",boxSizing:"border-box"}),marginBottom:12}} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
-              <div style={{display:"flex",gap:8}}>
-                <button onClick={addManual} style={bv("p",{fontSize:12,padding:"7px 16px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>Guardar</button>
-                <button onClick={()=>setShowAdd(false)} style={bv("ghost",{fontSize:12,padding:"7px 16px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>Cancelar</button>
-              </div>
-            </div>
-          )}
+          {/* Search + filters */}
+          <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Buscar ingrediente…"
+            style={{...inp({width:"100%",fontSize:12,padding:"8px 12px",boxSizing:"border-box",borderRadius:8}),marginBottom:8}}
+            onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
 
-          {results.pairings.length===0?(
-            <div style={{textAlign:"center",padding:"32px",background:G.surf,borderRadius:10,border:`1px solid ${G.brd}`}}>
-              <p style={{fontSize:13,color:G.textMut,marginBottom:16}}>No hay pairings guardados aún para este ingrediente.</p>
-              <button onClick={generatePairings} disabled={genLoading} style={bv("p",{padding:"10px 24px",fontSize:13,borderRadius:8})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
-                {genLoading?"Generando…":"✦ Generar pairings con IA"}
+          <div style={{display:"flex",gap:4,marginBottom:8,flexWrap:"wrap"}}>
+            {[["all","Todos"],["in_season","🌱"],["year_round","♾️"],["out_season","🌙"]].map(([k,l])=>(
+              <button key={k} onClick={()=>setFilter(k)}
+                style={{fontSize:10,padding:"4px 10px",borderRadius:20,border:`1px solid ${filter===k?G.blue:G.brd}`,background:filter===k?G.blueTint:G.w,color:filter===k?G.blue:G.textMut,cursor:"pointer",fontFamily:FB,fontWeight:filter===k?700:400}}>
+                {l}
               </button>
-            </div>
-          ):(
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {results.pairings.map(p=>(
-                <div key={p.id} style={{background:G.w,border:`1px solid ${G.brd}`,borderRadius:10,padding:"14px 16px",display:"flex",gap:16,alignItems:"flex-start"}}>
-                  <div style={{flex:1}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-                      <span style={{fontFamily:FH,fontSize:16,color:G.text,fontWeight:700}}>{p.pairs_with}</span>
-                      <span style={{fontSize:14}}>{SCORE_STARS(p.score)}</span>
-                      <span style={{fontSize:10,color:G.textMut,background:G.surf,padding:"2px 8px",borderRadius:10,border:`1px solid ${G.brd}`}}>{p.source==="user"?"👤 Manual":"✦ IA"}</span>
-                    </div>
-                    {p.compounds?.length>0&&<p style={{fontSize:11,color:G.blue,margin:"0 0 4px"}}>🧪 {p.compounds.join(" · ")}</p>}
-                    {p.notes&&<p style={{fontSize:12,color:G.textMid,margin:0}}>{p.notes}</p>}
+            ))}
+          </div>
+
+          <div style={{display:"flex",gap:4,marginBottom:12,flexWrap:"wrap"}}>
+            {cats.map(cat=>(
+              <button key={cat} onClick={()=>setCatFilter(cat)}
+                style={{fontSize:9,padding:"3px 8px",borderRadius:20,border:`1px solid ${catFilter===cat?G.blue:G.brd}`,background:catFilter===cat?G.blueTint:G.w,color:catFilter===cat?G.blue:G.textMut,cursor:"pointer",fontFamily:FB}}>
+                {cat==="all"?"Todas":cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Ingredient grid */}
+          <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:mob?260:580,overflowY:"auto",paddingRight:4}}>
+            {displayed.map(ing=>{
+              const status=getSeasonStatus(ing.season);
+              const meta=SEASON_META[status];
+              const usage=getUsage(ing.name);
+              const isSelected=selected===ing.name;
+              return(
+                <button key={ing.name} onClick={()=>selectIngredient(ing.name)}
+                  style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,
+                    border:`1px solid ${isSelected?G.blue:G.brd}`,
+                    background:isSelected?G.blueTint:G.w,
+                    cursor:"pointer",textAlign:"left",transition:"all .15s",width:"100%"}}
+                  onMouseOver={e=>{if(!isSelected){e.currentTarget.style.background=G.surf;e.currentTarget.style.borderColor=G.brdL;}}}
+                  onMouseOut={e=>{if(!isSelected){e.currentTarget.style.background=G.w;e.currentTarget.style.borderColor=G.brd;}}}>
+                  {/* Season icon */}
+                  <span style={{fontSize:13,flexShrink:0}}>{meta.icon}</span>
+                  {/* Name + category */}
+                  <div style={{flex:1,minWidth:0}}>
+                    <span style={{fontSize:12,color:isSelected?G.blue:G.text,fontWeight:isSelected?700:500}}>{ing.name}</span>
+                    <span style={{fontSize:9,color:G.textMut,marginLeft:6}}>{ing.cat}</span>
                   </div>
-                  <div style={{fontSize:18,fontWeight:700,color:p.score>=8?"#10B981":p.score>=6?"#F59E0B":"#6B7280",flexShrink:0,minWidth:28,textAlign:"center"}}>{p.score}</div>
+                  {/* Usage stars */}
+                  {usage>0&&<div style={{flexShrink:0,display:"flex",alignItems:"center",gap:2}}>
+                    <span style={{fontSize:9,color:"#F59E0B",fontWeight:700}}>{"★".repeat(Math.min(usage,3))}</span>
+                    {usage>1&&<span style={{fontSize:8,color:G.textMut}}>{usage}</span>}
+                  </div>}
+                </button>
+              );
+            })}
+          </div>
+          <p style={{fontSize:9,color:G.brd,marginTop:8,textAlign:"right"}}>{displayed.length} ingredientes · {MONTHS_ES[MONTH]}</p>
+        </div>
+
+        {/* ── RIGHT: Pairings panel ────────────────────────────────── */}
+        <div style={{flex:1,minWidth:0}}>
+          {!selected&&<div style={{textAlign:"center",padding:"64px 0",color:G.textMut}}>
+            <span style={{fontSize:40}}>🔬</span>
+            <p style={{fontSize:14,marginTop:12}}>Selecciona un ingrediente para ver sus pairings</p>
+            <p style={{fontSize:11,marginTop:6,color:G.brd}}>Los pairings se generan con IA basada en FlavorGraph, Segnit y Chartier</p>
+          </div>}
+
+          {selected&&(
+            <div>
+              {/* Header */}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,flexWrap:"wrap",gap:10}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <h3 style={{fontFamily:FH,fontSize:20,color:G.text,margin:0}}>{selected}</h3>
+                    {getUsage(selected)>0&&<span style={{fontSize:11,background:"#FEF3C7",color:"#92400E",padding:"2px 8px",borderRadius:20,fontWeight:700}}>⭐ Usas este ingrediente</span>}
+                  </div>
+                  <p style={{fontSize:11,color:G.textMut,margin:"4px 0 0"}}>{pairings.length} pairings guardados</p>
                 </div>
-              ))}
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>setShowAdd(p=>!p)} style={bv("ghost",{fontSize:11,padding:"7px 14px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>+ Agregar</button>
+                  <button onClick={generatePairings} disabled={genLoading} style={bv("p",{fontSize:11,padding:"7px 14px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                    {genLoading?"Generando…":"✦ Generar con IA"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Manual add form */}
+              {showAdd&&<div style={{background:G.surf,border:`1px solid ${G.brd}`,borderRadius:10,padding:"16px",marginBottom:16}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 70px",gap:8,marginBottom:8}}>
+                  <input value={newPair.pairs_with} onChange={e=>setNewPair(p=>({...p,pairs_with:e.target.value}))} placeholder="Ingrediente que combina con" style={inp({fontSize:12,padding:"7px 10px"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                  <input type="number" min="1" max="10" value={newPair.score} onChange={e=>setNewPair(p=>({...p,score:e.target.value}))} placeholder="Score" style={inp({fontSize:12,padding:"7px 10px"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                </div>
+                <input value={newPair.compounds} onChange={e=>setNewPair(p=>({...p,compounds:e.target.value}))} placeholder="Compuestos compartidos (opcional, separar con coma)" style={{...inp({fontSize:12,padding:"7px 10px",width:"100%",boxSizing:"border-box"}),marginBottom:8}} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                <input value={newPair.notes} onChange={e=>setNewPair(p=>({...p,notes:e.target.value}))} placeholder="Nota de maridaje (opcional)" style={{...inp({fontSize:12,padding:"7px 10px",width:"100%",boxSizing:"border-box"}),marginBottom:12}} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={addManual} style={bv("p",{fontSize:12,padding:"7px 16px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>Guardar</button>
+                  <button onClick={()=>setShowAdd(false)} style={bv("ghost",{fontSize:12,padding:"7px 16px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>Cancelar</button>
+                </div>
+              </div>}
+
+              {pLoading&&<p style={{color:G.textMut,fontSize:13,textAlign:"center",padding:24}}>Cargando pairings…</p>}
+
+              {!pLoading&&pairings.length===0&&<div style={{textAlign:"center",padding:"32px",background:G.surf,borderRadius:10,border:`1px solid ${G.brd}`}}>
+                <p style={{fontSize:13,color:G.textMut,marginBottom:16}}>Sin pairings guardados para {selected}.</p>
+                <button onClick={generatePairings} disabled={genLoading} style={bv("p",{padding:"10px 24px",fontSize:13,borderRadius:8})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                  {genLoading?"Generando…":"✦ Generar 10 pairings con IA"}
+                </button>
+              </div>}
+
+              {!pLoading&&pairings.length>0&&(
+                <div style={{display:"grid",gap:10,gridTemplateColumns:mob?"1fr":"1fr 1fr"}}>
+                  {pairings.map(p=>{
+                    const pStatus=getSeasonStatus((INGS.find(i=>i.name.toLowerCase()===p.pairs_with.toLowerCase())?.season)||[]);
+                    const pMeta=SEASON_META[pStatus];
+                    const scoreColor=p.score>=8?"#059669":p.score>=6?"#D97706":"#6B7280";
+                    return(
+                      <div key={p.id} style={{background:G.w,border:`1px solid ${G.brd}`,borderRadius:10,padding:"12px 14px",transition:"box-shadow .15s"}}
+                        onMouseOver={e=>e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,.08)"}
+                        onMouseOut={e=>e.currentTarget.style.boxShadow="none"}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:12}}>{pMeta.icon}</span>
+                            <span style={{fontFamily:FH,fontSize:14,color:G.text,fontWeight:700}}>{p.pairs_with}</span>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:10,color:p.source==="user"?"#7C3AED":"#1B4FD8",background:p.source==="user"?"#EDE9FE":"#EFF6FF",padding:"1px 7px",borderRadius:20,fontWeight:600}}>{p.source==="user"?"👤":"✦ IA"}</span>
+                            <span style={{fontSize:16,fontWeight:800,color:scoreColor}}>{p.score}</span>
+                          </div>
+                        </div>
+                        {p.compounds?.length>0&&<p style={{fontSize:10,color:"#6366F1",margin:"0 0 4px",lineHeight:1.4}}>🧪 {p.compounds.join(" · ")}</p>}
+                        {p.notes&&<p style={{fontSize:11,color:G.textMid,margin:0,lineHeight:1.5}}>{p.notes}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
-
-      {!results&&<div style={{textAlign:"center",padding:"64px 0",color:G.textMut}}>
-        <p style={{fontSize:14}}>🔬 Busca un ingrediente para ver sus pairings científicos</p>
-        <p style={{fontSize:11,marginTop:8}}>Los pairings se guardan en tu base de datos y mejoran con el uso</p>
-      </div>}
+      </div>
     </div>
   );
 }
+
 
 function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
   const[labTab,setLabTab]=useState("wheel"); // wheel | need
@@ -1747,7 +1948,7 @@ function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
 
       {/* ── PESTAÑA: DESDE LA NECESIDAD ── */}
       {labTab==="need"&&<NecesidadLab onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>}
-      {labTab==="pairings"&&<PairingsLab/>}
+      {labTab==="pairings"&&<PairingsLab recipes={recipes}/>}
 
       {/* ── PESTAÑA: RUEDA AROMÁTICA ── */}
       {labTab==="wheel"&&<>
