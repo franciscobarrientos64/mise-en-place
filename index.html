@@ -398,7 +398,7 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady,onRefres
             {label}
           </button>
         ))}
-        <button onClick={onRefresh||refreshFromCloud} disabled={sbSyncing} title="Actualizar desde la nube" style={{background:"none",border:"none",cursor:sbSyncing?"wait":"pointer",color:sbSyncing?"#F59E0B":G.textMut,fontSize:18,padding:"0 8px",display:"flex",alignItems:"center",lineHeight:1}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=sbSyncing?"#F59E0B":G.textMut}>↻</button>
+        <button onClick={()=>onRefresh&&onRefresh()} disabled={sbSyncing} title="Actualizar desde la nube" style={{background:"none",border:"none",cursor:sbSyncing?"wait":"pointer",color:sbSyncing?"#F59E0B":G.textMut,fontSize:18,padding:"0 8px",display:"flex",alignItems:"center",lineHeight:1}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=sbSyncing?"#F59E0B":G.textMut}>↻</button>
         {!mob&&nav==="recipes"&&view==="gallery"&&<button onClick={onAdd} style={{...bv("p",{padding:"7px 16px",fontSize:11,fontWeight:700,marginLeft:4})}} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>+ Nueva Receta</button>}
       </nav>
     </header>
