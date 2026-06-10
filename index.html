@@ -1467,6 +1467,254 @@ const ING_EXTENDED={
 /* ══ PAIRINGS LAB ══ */
 
 
+
+/* ══ VINAIGRETTE BUILDER ══ */
+function VinagretaBuilder({onSaveRecipe}){
+  const OILS=[
+    {name:"Aceite de oliva extra virgen",color:"#84CC16"},
+    {name:"Aceite de oliva suave",color:"#A3E635"},
+    {name:"Aceite de girasol",color:"#EAB308"},
+    {name:"Aceite de aguacate",color:"#22C55E"},
+    {name:"Aceite de sésamo tostado",color:"#92400E"},
+    {name:"Aceite de nuez",color:"#D97706"},
+    {name:"Aceite de avellana",color:"#B45309"},
+    {name:"Aceite de trufa",color:"#374151"},
+    {name:"Aceite de coco",color:"#F9FAFB"},
+    {name:"Aceite de maíz",color:"#FCD34D"},
+  ];
+  const ACIDS=[
+    {name:"Vinagre de vino tinto",color:"#7C3AED"},
+    {name:"Vinagre de vino blanco",color:"#FEF9C3"},
+    {name:"Vinagre balsámico",color:"#1F2937"},
+    {name:"Vinagre balsámico blanco",color:"#FEF3C7"},
+    {name:"Vinagre de manzana",color:"#78350F"},
+    {name:"Vinagre de arroz",color:"#F1F5F9"},
+    {name:"Vinagre de Jerez",color:"#92400E"},
+    {name:"Jugo de limón",color:"#FDE047"},
+    {name:"Jugo de naranja",color:"#F97316"},
+    {name:"Jugo de maracuyá",color:"#FBBF24"},
+    {name:"Jugo de lima",color:"#86EFAC"},
+    {name:"Verjus",color:"#D1FAE5"},
+  ];
+  const EMULSIFIERS=[
+    {name:"Mostaza Dijon",color:"#EAB308"},
+    {name:"Mostaza antigua (grainy)",color:"#92400E"},
+    {name:"Yema de huevo",color:"#FCD34D"},
+    {name:"Miel",color:"#F59E0B"},
+    {name:"Pasta de miso blanco",color:"#FEF9C3"},
+    {name:"Pasta de miso rojo",color:"#7C3AED"},
+    {name:"Tahini",color:"#D97706"},
+    {name:"Ajo confitado",color:"#FEF3C7"},
+    {name:"Pasta de ají amarillo",color:"#F59E0B"},
+    {name:"Lecitina de soja",color:"#D1FAE5"},
+  ];
+  const SEASONINGS=[
+    "Sal de mar","Pimienta negra","Ajo fresco","Ajo en polvo","Chalota","Perejil","Cebollín",
+    "Tomillo","Romero","Orégano","Estragón","Albahaca","Menta","Eneldo","Miel",
+    "Pimentón ahumado","Comino","Curry","Cúrcuma","Flor de sal","Pimienta rosa",
+  ];
+
+  // ── State ──────────────────────────────────────────────────────────
+  const[yield_ml,setYield]=useState(130);
+  // Each component: [{id, ingredient, pct}] where pct = share within section
+  const[oils,setOils]=useState([{id:"o1",ingredient:"Aceite de oliva extra virgen",pct:100}]);
+  const[acids,setAcids]=useState([{id:"a1",ingredient:"Jugo de limón",pct:50},{id:"a2",ingredient:"Vinagre de vino blanco",pct:50}]);
+  const[emul,setEmul]=useState([{id:"e1",ingredient:"Mostaza Dijon",pct:100}]);
+  const[seasonings,setSeasonings]=useState([]);
+  const[customSeas,setCustomSeas]=useState("");
+  const[saving,setSaving]=useState(false);
+  const[aiSug,setAiSug]=useState("");
+  const[aiLoading,setAiLoading]=useState(false);
+  const[name,setName]=useState("Mi Vinagreta");
+
+  // ── Calculations ───────────────────────────────────────────────────
+  const PARTS={oil:9,acid:3,emul:1};
+  const TOTAL_PARTS=13;
+  const partMl=yield_ml/TOTAL_PARTS;
+  const oilMl=partMl*PARTS.oil;
+  const acidMl=partMl*PARTS.acid;
+  const emulMl=partMl*PARTS.emul;
+
+  const calcItems=(items,totalMl)=>items.map(it=>({...it,ml:+(totalMl*it.pct/100).toFixed(1)}));
+  const oilItems=calcItems(oils,oilMl);
+  const acidItems=calcItems(acids,acidMl);
+  const emulItems=calcItems(emul,emulMl);
+
+  // ── Helpers ────────────────────────────────────────────────────────
+  const gid2=()=>Math.random().toString(36).substr(2,6);
+  const addItem=(setter,options,prefix)=>setter(p=>[...p,{id:prefix+gid2(),ingredient:options[0].name,pct:Math.floor(100/(p.length+1))}]);
+  const removeItem=(setter,id)=>setter(p=>{
+    const remaining=p.filter(x=>x.id!==id);
+    const perItem=Math.floor(100/remaining.length);
+    return remaining.map((x,i)=>({...x,pct:i===remaining.length-1?100-perItem*(remaining.length-1):perItem}));
+  });
+  const updateItem=(setter,id,field,val)=>setter(p=>p.map(x=>x.id===id?{...x,[field]:val}:x));
+  const normalizePcts=(setter)=>setter(p=>{
+    const total=p.reduce((s,x)=>s+ +x.pct,0);
+    if(total===0)return p;
+    return p.map(x=>({...x,pct:Math.round(x.pct/total*100)}));
+  });
+
+  // ── AI suggestions ─────────────────────────────────────────────────
+  const getAISuggestion=async()=>{
+    setAiLoading(true);setAiSug("");
+    const oilNames=oils.map(o=>o.ingredient).join(", ");
+    const acidNames=acids.map(a=>a.ingredient).join(", ");
+    const emulName=emul.map(e=>e.ingredient).join(", ");
+    try{
+      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:400,
+          system:"Eres chef experto en salsas y vinagretas. Responde en español, máximo 3 oraciones, tono profesional.",
+          messages:[{role:"user",content:`Vinagreta: Aceites(${oilNames}) + Ácidos(${acidNames}) + Emulsificador(${emulName}). ¿Qué platos le van bien? ¿Algún ajuste sugerido?`}]})});
+      const data=await res.json();
+      setAiSug(data.content?.[0]?.text||"");
+    }catch(e){setAiSug("Error: "+e.message);}
+    setAiLoading(false);
+  };
+
+  // ── Save as recipe ─────────────────────────────────────────────────
+  const saveAsRecipe=()=>{
+    const allIng=[
+      ...oilItems.map(x=>({id:gid2(),name:x.ingredient,quantity:x.ml,unit:"ml",yieldPct:100})),
+      ...acidItems.map(x=>({id:gid2(),name:x.ingredient,quantity:x.ml,unit:"ml",yieldPct:100})),
+      ...emulItems.map(x=>({id:gid2(),name:x.ingredient,quantity:x.ml,unit:"ml",yieldPct:100})),
+    ];
+    const seasIng=seasonings.map(s=>({id:gid2(),name:s,quantity:1,unit:"al gusto",yieldPct:100}));
+    const recipe={
+      name,category:"Fondos & Salsas",portions:1,photo:null,cutlery:["fork_knife"],colls:[],plating:"",links:[],
+      steps:[{
+        id:gid2(),name:"Preparación",notes:"",
+        method:`Vinagreta ratio 9:3:1. Mezclar primero ${emulItems.map(x=>x.ingredient).join(" y ")} con los ácidos (${acidItems.map(x=>x.ingredient).join(", ")}). Incorporar los aceites (${oilItems.map(x=>x.ingredient).join(", ")}) en hilo fino batiendo constantemente hasta emulsionar. Ajustar sal y pimienta.${seasonings.length?` Agregar: ${seasonings.join(", ")}.`:""}`,
+        ingredients:[...allIng,...seasIng],
+      }],
+    };
+    onSaveRecipe&&onSaveRecipe(recipe);
+    setSaving(true);setTimeout(()=>setSaving(false),2000);
+  };
+
+  // ── Component section renderer ─────────────────────────────────────
+  const Section=({label,icon,color,items,setter,options,prefix,totalMl,maxItems=4})=>(
+    <div style={{marginBottom:20}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <div style={{width:12,height:12,borderRadius:"50%",background:color}}/>
+          <span style={{fontFamily:FB,fontSize:11,fontWeight:700,color:G.text,letterSpacing:.5,textTransform:"uppercase"}}>{icon} {label}</span>
+          <span style={{fontFamily:FB,fontSize:10,color:G.textMut}}>{+(totalMl).toFixed(1)} ml</span>
+        </div>
+        {items.length<maxItems&&<button onClick={()=>addItem(setter,options,prefix)} style={{fontSize:10,padding:"2px 8px",borderRadius:10,border:`1px solid ${G.brd}`,background:G.w,cursor:"pointer",color:G.blue,fontFamily:FB}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>+ añadir</button>}
+      </div>
+      {items.map((item,idx)=>(
+        <div key={item.id} style={{display:"flex",gap:8,marginBottom:6,alignItems:"center"}}>
+          <select value={item.ingredient} onChange={e=>{updateItem(setter,item.id,"ingredient",e.target.value);}}
+            style={{flex:1,fontFamily:FB,fontSize:11,padding:"5px 8px",border:`1px solid ${G.brd}`,borderRadius:6,background:G.w,color:G.text,outline:"none"}}>
+            {options.map(o=><option key={o.name} value={o.name}>{o.name}</option>)}
+            <option value={item.ingredient.startsWith("Otro:")?"item.ingredient":"Otro: personalizado"}>✏️ Personalizado…</option>
+          </select>
+          {items.length>1&&<>
+            <input type="range" min="10" max="90" value={item.pct} onChange={e=>{updateItem(setter,item.id,"pct",+e.target.value);normalizePcts(setter);}}
+              style={{width:60,accentColor:color}}/>
+            <span style={{fontFamily:FB,fontSize:10,color:G.textMut,minWidth:28,textAlign:"right"}}>{item.pct}%</span>
+          </>}
+          <span style={{fontFamily:FB,fontSize:11,fontWeight:600,color:color,minWidth:40,textAlign:"right"}}>{+(totalMl*item.pct/100).toFixed(1)}ml</span>
+          {items.length>1&&<button onClick={()=>removeItem(setter,item.id)} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontSize:14,padding:"0 2px",flexShrink:0}}>×</button>}
+        </div>
+      ))}
+    </div>
+  );
+
+  // ── Render ─────────────────────────────────────────────────────────
+  return(
+    <div style={{fontFamily:FB,maxWidth:800,margin:"0 auto"}}>
+      {/* Header + name */}
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,flexWrap:"wrap"}}>
+        <input value={name} onChange={e=>setName(e.target.value)}
+          style={{fontFamily:FH,fontSize:20,fontWeight:700,color:G.text,border:"none",borderBottom:`2px solid ${G.blue}`,outline:"none",background:"transparent",minWidth:200,flex:1}}/>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontFamily:FB,fontSize:11,color:G.textMut}}>Rendimiento total:</span>
+          <input type="number" min="50" max="2000" step="10" value={yield_ml} onChange={e=>setYield(+e.target.value)}
+            style={{...inp({width:80,fontSize:12,padding:"5px 8px",textAlign:"right"}),borderRadius:6}}
+            onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+          <span style={{fontSize:11,color:G.textMut}}>ml</span>
+        </div>
+      </div>
+
+      {/* Ratio bar */}
+      <div style={{marginBottom:20}}>
+        <div style={{display:"flex",borderRadius:8,overflow:"hidden",height:28,marginBottom:6}}>
+          <div style={{flex:9,background:"#84CC16",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontSize:10,fontWeight:700,color:"#1a1a1a",fontFamily:FB}}>9 partes aceite · {+oilMl.toFixed(1)}ml</span>
+          </div>
+          <div style={{flex:3,background:"#F97316",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontSize:10,fontWeight:700,color:"#fff",fontFamily:FB}}>3 ácido · {+acidMl.toFixed(1)}ml</span>
+          </div>
+          <div style={{flex:1,background:"#6366F1",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontSize:10,fontWeight:700,color:"#fff",fontFamily:FB}}>1 · {+emulMl.toFixed(1)}ml</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:16,justifyContent:"center"}}>
+          {[["#84CC16","Aceite/Grasa"],["#F97316","Ácido"],["#6366F1","Emulsificador"]].map(([c,l])=>(
+            <div key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:G.textMut}}>
+              <div style={{width:8,height:8,borderRadius:2,background:c}}/>
+              <span>{l}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Two columns on desktop */}
+      <div style={{display:"grid",gridTemplateColumns:useMobile()?"1fr":"1fr 1fr",gap:24}}>
+        <div>
+          <Section label="Aceite / Grasa" icon="🫙" color="#84CC16" items={oilItems} setter={setOils} options={OILS} prefix="o" totalMl={oilMl}/>
+          <Section label="Ácido" icon="🍋" color="#F97316" items={acidItems} setter={setAcids} options={ACIDS} prefix="a" totalMl={acidMl}/>
+          <Section label="Emulsificador" icon="🥚" color="#6366F1" items={emulItems} setter={setEmul} options={EMULSIFIERS} prefix="e" totalMl={emulMl} maxItems={2}/>
+        </div>
+        <div>
+          {/* Seasonings */}
+          <div style={{marginBottom:20}}>
+            <p style={{fontFamily:FB,fontSize:11,fontWeight:700,color:G.text,letterSpacing:.5,textTransform:"uppercase",marginBottom:8}}>🌿 Sazón (opcional)</p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
+              {SEASONINGS.map(s=>{
+                const active=seasonings.includes(s);
+                return(
+                  <button key={s} onClick={()=>setSeasonings(p=>active?p.filter(x=>x!==s):[...p,s])}
+                    style={{fontSize:10,padding:"4px 10px",borderRadius:20,border:`1px solid ${active?"#10B981":G.brd}`,background:active?"#D1FAE5":"transparent",color:active?"#065F46":G.textMut,cursor:"pointer",fontFamily:FB,fontWeight:active?700:400,transition:"all .15s"}}>
+                    {s}
+                  </button>
+                );
+              })}
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <input value={customSeas} onChange={e=>setCustomSeas(e.target.value)} placeholder="Otro ingrediente…"
+                style={inp({fontSize:11,padding:"5px 10px",flex:1})}
+                onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}
+                onKeyDown={e=>{if(e.key==="Enter"&&customSeas.trim()){setSeasonings(p=>[...p,customSeas.trim()]);setCustomSeas("");}}}/>
+              <button onClick={()=>{if(customSeas.trim()){setSeasonings(p=>[...p,customSeas.trim()]);setCustomSeas("");}}}
+                style={bv("ghost",{fontSize:11,padding:"5px 12px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>+ Añadir</button>
+            </div>
+          </div>
+
+          {/* AI suggestion */}
+          <div style={{background:G.surf,border:`1px solid ${G.brd}`,borderRadius:10,padding:14,marginBottom:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:aiSug?10:0}}>
+              <p style={{fontFamily:FB,fontSize:11,fontWeight:700,color:G.text,margin:0}}>✦ Sugerencia del chef IA</p>
+              <button onClick={getAISuggestion} disabled={aiLoading} style={bv("p",{fontSize:10,padding:"5px 12px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                {aiLoading?"Analizando…":"Consultar"}
+              </button>
+            </div>
+            {aiSug&&<p style={{fontSize:12,color:G.textMid,margin:0,lineHeight:1.6}}>{aiSug}</p>}
+          </div>
+
+          {/* Save */}
+          <button onClick={saveAsRecipe} style={{...bv("p",{padding:"12px 24px",fontSize:13,borderRadius:8,width:"100%"}),display:"flex",alignItems:"center",justifyContent:"center",gap:8}} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+            {saving?"✅ Guardada en recetas":"💾 Guardar como receta"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 function PairingsLab({recipes}){
   const MONTH=new Date().getMonth()+1;
   const[INGS,setINGS]=useState([]);
@@ -1854,7 +2102,7 @@ function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
           </h1>
           {/* Main tabs */}
           <div style={{display:"flex",gap:0,background:G.surf,borderRadius:8,padding:3}}>
-            {[["wheel","🎯 Rueda Aromática"],["need","💡 Desde la Necesidad"],["pairings","🔬 Pairings"]].map(([id,label])=>(
+            {[["wheel","🎯 Rueda Aromática"],["need","💡 Desde la Necesidad"],["pairings","🔬 Pairings"],["vinagreta","🥗 Vinagretas"]].map(([id,label])=>(
               <button key={id} onClick={()=>setLabTab(id)} style={{padding:"8px 16px",border:"none",borderRadius:6,background:labTab===id?G.w:"transparent",color:labTab===id?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:labTab===id?700:400,boxShadow:labTab===id?"0 1px 4px rgba(0,0,0,.08)":"none",transition:"all .15s"}}>
                 {label}
               </button>
@@ -1866,6 +2114,7 @@ function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
       {/* ── PESTAÑA: DESDE LA NECESIDAD ── */}
       {labTab==="need"&&<NecesidadLab onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>}
       {labTab==="pairings"&&<PairingsLab recipes={recipes}/>}
+      {labTab==="vinagreta"&&<VinagretaBuilder onSaveRecipe={r=>{onAddRecipe&&onAddRecipe(r);}}/>}
 
       {/* ── PESTAÑA: RUEDA AROMÁTICA ── */}
       {labTab==="wheel"&&<>
