@@ -62,6 +62,16 @@ def validate(path):
         if fn not in script:
             errors.append(f"MISSING_GLOBAL '{fn}' — function not defined in script")
 
+    # ── 6. Duplicate function definitions ────────────────────────────────
+    import re as _re
+    fn_names = _re.findall(r'function (\w+)\s*\(', script)
+    seen = set(); dupes = set()
+    for fn in fn_names:
+        if fn in seen: dupes.add(fn)
+        seen.add(fn)
+    if dupes:
+        errors.append(f"DUPLICATE FUNCTIONS: {', '.join(dupes)} — defined more than once")
+
     # ── Result ─────────────────────────────────────────────────────────
     lines = len(script.splitlines())
     if errors:
