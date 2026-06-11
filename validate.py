@@ -57,7 +57,7 @@ def validate(path):
             errors.append(f"DEMO_R BRACKET IMBALANCE: {opens} opens vs {closes} closes")
 
     # ── 5. Required global functions ─────────────────────────────────────
-    REQUIRED_GLOBALS = ['loadIngredients','loadPairings','savePairing','sbBatch','sbUpsert','sbLoad','gid']
+    REQUIRED_GLOBALS = ['loadIngredients','loadPairings','savePairing','sbBatch','sbUpsert','sbLoad','gid','FlavorLab','PairingsLab','VinagretaBuilder','NecesidadLab']
     for fn in REQUIRED_GLOBALS:
         if fn not in script:
             errors.append(f"MISSING_GLOBAL '{fn}' — function not defined in script")
