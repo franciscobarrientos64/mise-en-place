@@ -1803,6 +1803,694 @@ const QUICK_FILTERS=[
 ]}
 ];
 
+
+function PairingsLab({recipes}){
+  const MONTH=new Date().getMonth()+1;
+  const[INGS,setINGS]=useState([]);
+  const[ingsLoading,setIngsLoading]=useState(true);
+  const[filter,setFilter]=useState("all");
+  const[searchQ,setSearchQ]=useState("");
+  const[selected,setSelected]=useState(null);
+  const[pairings,setPairings]=useState([]);
+  const[pLoading,setPLoading]=useState(false);
+  const[genLoading,setGenLoading]=useState(false);
+  const[showAdd,setShowAdd]=useState(false);
+  const[newPair,setNewPair]=useState({pairs_with:"",score:7,compounds:"",notes:""});
+  const mob=useMobile();
+
+  useEffect(()=>{
+    loadIngredients().then(rows=>{
+      setINGS(rows.map(r=>({name:r.name,cat:r.category,season:r.season||[],origin:r.origin||"global"})));
+      setIngsLoading(false);
+    }).catch(()=>setIngsLoading(false));
+  },[]);
+
+  const getSeasonStatus=(season)=>{
+    if(!season||season.length===0)return"year_round";
+    return season.includes(MONTH)?"in_season":"out_season";
+  };
+  const SM={in_season:{icon:"🌱",color:"#059669",bg:"#D1FAE5"},year_round:{icon:"♾️",color:"#6366F1",bg:"#E0E7FF"},out_season:{icon:"🌙",color:"#9CA3AF",bg:"#F3F4F6"}};
+
+  const usageCount=React.useMemo(()=>{
+    const counts={};
+    (recipes||[]).forEach(r=>(r.steps||[]).forEach(s=>(s.ingredients||[]).forEach(i=>{
+      const k=i.name.toLowerCase().trim();counts[k]=(counts[k]||0)+1;
+    })));
+    return counts;
+  },[recipes]);
+  const getUsage=(name)=>usageCount[name.toLowerCase().trim()]||0;
+
+  // ── Generate pairings (robust JSON parsing) ──────────────────────────
+  const generatePairingsFor=async(name)=>{
+    if(!name)return;
+    setGenLoading(true);
+    try{
+      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),
+        body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,
+          system:"Eres experto en food pairing. Responde ÚNICAMENTE con JSON válido y completo. Sin texto extra.",
+          messages:[{role:"user",content:'Dame 6 food pairings para "'+name+'". Formato EXACTO (copia esta estructura):\n{"p":[{"w":"ingrediente","s":8,"c":["compuesto1","compuesto2"],"n":"nota breve en español"},{"w":"ingrediente2","s":7,"c":["compuesto"],"n":"nota"}]}'}]})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data?.error?.message||"Error API "+res.status);
+      const text=(data.content?.[0]?.text||"").trim();
+      if(!text)throw new Error("Respuesta vacía");
+      // Extract JSON object
+      const oi=text.indexOf("{"), oe=text.lastIndexOf("}");
+      if(oi===-1||oe===-1)throw new Error("Sin JSON en respuesta: "+text.slice(0,80));
+      const obj=JSON.parse(text.slice(oi,oe+1));
+      const ps=obj.p||obj.pairings||[];
+      if(!ps.length)throw new Error("Array vacío en respuesta");
+      for(const p of ps){
+        const pw=p.w||p.pairs_with||"";
+        if(pw) await savePairing({ingredient:name,pairs_with:pw,score:+(p.s||p.score||5),compounds:p.c||p.compounds||[],notes:p.n||p.notes||"",source:"ai"});
+      }
+      const fresh=await loadPairings(name);
+      setPairings(fresh);
+    }catch(e){alert("Error: "+e.message);}
+    setGenLoading(false);
+  };
+
+  const selectIngredient=async(name)=>{
+    if(selected===name){setSelected(null);setPairings([]);return;}
+    setSelected(name);setPLoading(true);
+    const rows=await loadPairings(name);
+    setPairings(rows);setPLoading(false);
+    if(rows.length===0)generatePairingsFor(name);
+  };
+
+  const addManual=async()=>{
+    if(!newPair.pairs_with.trim()||!selected)return;
+    await savePairing({ingredient:selected,pairs_with:newPair.pairs_with.trim(),score:+newPair.score,
+      compounds:newPair.compounds?newPair.compounds.split(",").map(s=>s.trim()).filter(Boolean):[],
+      notes:newPair.notes,source:"user"});
+    const fresh=await loadPairings(selected);setPairings(fresh);
+    setNewPair({pairs_with:"",score:7,compounds:"",notes:""});setShowAdd(false);
+  };
+
+  // ── Group ingredients by category ────────────────────────────────────
+  const filtered=INGS
+    .filter(i=>filter==="all"||getSeasonStatus(i.season)===filter)
+    .filter(i=>!searchQ||i.name.toLowerCase().includes(searchQ.toLowerCase()));
+
+  const byCategory=filtered.reduce((acc,i)=>{
+    if(!acc[i.cat])acc[i.cat]=[];
+    acc[i.cat].push(i);return acc;
+  },{});
+  const catOrder=["Proteína","Fruta","Cítrico","Verdura","Tubérculo","Ají","Legumbre","Cereal","Lácteo","Hierba","Especia","Condimento","Nuez","Hongo","Grasa","Fermentado","Alcohol","Flores","Alga","Otro"];
+  const sortedCats=catOrder.filter(c=>byCategory[c]?.length).concat(Object.keys(byCategory).filter(c=>!catOrder.includes(c)&&byCategory[c]?.length));
+
+  // ── Layout: grid (no selection) vs split (selection) ──────────────────
+  const isSplit=!!selected;
+
+  const IngChip=({ing})=>{
+    const st=getSeasonStatus(ing.season);
+    const meta=SM[st];
+    const usage=getUsage(ing.name);
+    const isSelected=selected===ing.name;
+    return(
+      <button onClick={()=>selectIngredient(ing.name)}
+        style={{display:"inline-flex",alignItems:"center",gap:4,padding:isSplit?"5px 9px":"6px 11px",
+          borderRadius:20,border:`1px solid ${isSelected?G.blue:meta.color+"44"}`,
+          background:isSelected?G.blue:meta.bg,
+          color:isSelected?"#fff":meta.color,
+          cursor:"pointer",fontFamily:FB,fontSize:isSplit?10:11,fontWeight:isSelected?700:500,
+          transition:"all .2s",whiteSpace:"nowrap",flexShrink:0}}
+        onMouseOver={e=>{if(!isSelected){e.currentTarget.style.borderColor=meta.color;e.currentTarget.style.background=meta.bg;}}}
+        onMouseOut={e=>{if(!isSelected){e.currentTarget.style.borderColor=meta.color+"44";e.currentTarget.style.background=meta.bg;}}}>
+        <span style={{fontSize:isSplit?10:11}}>{meta.icon}</span>
+        <span>{ing.name}</span>
+        {usage>0&&<span style={{fontSize:9,opacity:.8}}>{"★".repeat(Math.min(usage,3))}</span>}
+      </button>
+    );
+  };
+
+  const IngredientsPanel=(
+    <div style={{minWidth:0}}>
+      {/* Filters */}
+      <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+        <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Buscar…"
+          style={{...inp({fontSize:11,padding:"5px 10px",borderRadius:20,width:120,boxSizing:"border-box"})}}
+          onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+        {[["all","Todos"],["in_season","🌱"],["year_round","♾️"],["out_season","🌙"]].map(([k,l])=>(
+          <button key={k} onClick={()=>setFilter(k)}
+            style={{fontSize:10,padding:"4px 10px",borderRadius:20,border:`1px solid ${filter===k?G.blue:G.brd}`,
+              background:filter===k?G.blue:"transparent",color:filter===k?"#fff":G.textMut,
+              cursor:"pointer",fontFamily:FB,fontWeight:filter===k?700:400}}>
+            {l}
+          </button>
+        ))}
+        {selected&&<button onClick={()=>{setSelected(null);setPairings([]);}}
+          style={{marginLeft:"auto",fontSize:10,padding:"4px 10px",borderRadius:20,border:`1px solid ${G.brd}`,background:"none",color:G.textMut,cursor:"pointer",fontFamily:FB}}>
+          ✕ Cerrar
+        </button>}
+      </div>
+      {ingsLoading&&<p style={{fontSize:11,color:G.textMut,textAlign:"center",padding:12}}>Cargando…</p>}
+      {/* By category */}
+      {!ingsLoading&&sortedCats.map(cat=>(
+        <div key={cat} style={{marginBottom:isSplit?10:14}}>
+          <p style={{fontSize:9,color:G.textMut,letterSpacing:1.5,textTransform:"uppercase",fontWeight:700,margin:"0 0 5px",fontFamily:FB}}>{cat}</p>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+            {byCategory[cat].sort((a,b)=>getUsage(b.name)-getUsage(a.name)||a.name.localeCompare(b.name,"es")).map(ing=><IngChip key={ing.name} ing={ing}/>)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const PairingsPanel=(
+    <div style={{flex:1,minWidth:0,paddingLeft:isSplit&&!mob?24:0,borderLeft:isSplit&&!mob?`1px solid ${G.brd}`:"none"}}>
+      {selected&&<>
+        {/* Header */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+          <div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:SM[getSeasonStatus((INGS.find(i=>i.name===selected)?.season)||[])].icon,fontSize:18}}>
+                {SM[getSeasonStatus((INGS.find(i=>i.name===selected)?.season)||[])].icon}
+              </span>
+              <h3 style={{fontFamily:FH,fontSize:18,color:G.text,margin:0}}>{selected}</h3>
+              {getUsage(selected)>0&&<span style={{fontSize:10,background:"#FEF3C7",color:"#92400E",padding:"2px 8px",borderRadius:20,fontWeight:700}}>⭐ En tus recetas</span>}
+            </div>
+            <p style={{fontSize:10,color:G.textMut,margin:"3px 0 0"}}>{pairings.length} pairings · {genLoading?"generando…":"listo"}</p>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={()=>setShowAdd(p=>!p)} style={bv("ghost",{fontSize:10,padding:"5px 12px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>+ Agregar</button>
+            <button onClick={()=>generatePairingsFor(selected)} disabled={genLoading} style={bv("p",{fontSize:10,padding:"5px 12px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>{genLoading?"…":"↻ Generar más"}</button>
+          </div>
+        </div>
+        {/* Manual add */}
+        {showAdd&&<div style={{background:G.surf,border:`1px solid ${G.brd}`,borderRadius:8,padding:12,marginBottom:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 60px",gap:8,marginBottom:8}}>
+            <input value={newPair.pairs_with} onChange={e=>setNewPair(p=>({...p,pairs_with:e.target.value}))} placeholder="Combina con…" style={inp({fontSize:11,padding:"6px 10px"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+            <input type="number" min="1" max="10" value={newPair.score} onChange={e=>setNewPair(p=>({...p,score:e.target.value}))} style={inp({fontSize:11,padding:"6px 10px"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+          </div>
+          <input value={newPair.compounds} onChange={e=>setNewPair(p=>({...p,compounds:e.target.value}))} placeholder="Compuestos (coma)" style={{...inp({fontSize:11,padding:"6px 10px",width:"100%",boxSizing:"border-box"}),marginBottom:8}} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+          <input value={newPair.notes} onChange={e=>setNewPair(p=>({...p,notes:e.target.value}))} placeholder="Nota" style={{...inp({fontSize:11,padding:"6px 10px",width:"100%",boxSizing:"border-box"}),marginBottom:10}} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={addManual} style={bv("p",{fontSize:11,padding:"6px 14px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>Guardar</button>
+            <button onClick={()=>setShowAdd(false)} style={bv("ghost",{fontSize:11,padding:"6px 14px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>Cancelar</button>
+          </div>
+        </div>}
+        {(pLoading||genLoading)&&!pairings.length&&<p style={{fontSize:12,color:G.textMut,textAlign:"center",padding:24}}>Generando pairings con IA…</p>}
+        {/* Pairings grid */}
+        {pairings.length>0&&<div style={{display:"grid",gap:8,gridTemplateColumns:mob?"1fr":"1fr 1fr"}}>
+          {pairings.map(p=>{
+            const pIng=INGS.find(i=>i.name.toLowerCase()===p.pairs_with.toLowerCase());
+            const pSt=getSeasonStatus(pIng?.season||[]);
+            const pMeta=SM[pSt];
+            const sc=+p.score;
+            const scColor=sc>=8?"#059669":sc>=6?"#D97706":"#6B7280";
+            return(
+              <div key={p.id} style={{background:G.w,border:`1px solid ${G.brd}`,borderRadius:8,padding:"10px 12px",transition:"box-shadow .15s",cursor:"default"}}
+                onMouseOver={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,.08)"}
+                onMouseOut={e=>e.currentTarget.style.boxShadow="none"}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5}}>
+                    <span>{pMeta.icon}</span>
+                    <span style={{fontFamily:FH,fontSize:13,color:G.text,fontWeight:700}}>{p.pairs_with}</span>
+                    <span style={{fontSize:9,color:p.source==="user"?"#7C3AED":"#1B4FD8",background:p.source==="user"?"#EDE9FE":"#EFF6FF",padding:"1px 6px",borderRadius:20}}>{p.source==="user"?"👤":"✦"}</span>
+                  </div>
+                  <span style={{fontSize:17,fontWeight:800,color:scColor,minWidth:20,textAlign:"center"}}>{sc}</span>
+                </div>
+                {p.compounds?.length>0&&<p style={{fontSize:9,color:"#6366F1",margin:"0 0 3px",lineHeight:1.4}}>🧪 {p.compounds.join(" · ")}</p>}
+                {p.notes&&<p style={{fontSize:11,color:G.textMid,margin:0,lineHeight:1.4}}>{p.notes}</p>}
+              </div>
+            );
+          })}
+        </div>}
+      </>}
+      {!selected&&<div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",minHeight:200,color:G.textMut,textAlign:"center"}}>
+        <span style={{fontSize:36,marginBottom:12}}>←</span>
+        <p style={{fontSize:13}}>Selecciona un ingrediente para ver sus pairings</p>
+      </div>}
+    </div>
+  );
+
+  return(
+    <div style={{fontFamily:FB}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <div>
+          <h3 style={{fontFamily:FH,fontSize:16,color:G.text,margin:0}}>Food Pairing Lab</h3>
+          <p style={{fontSize:10,color:G.textMut,margin:"2px 0 0"}}>FlavorGraph · Segnit · Chartier · {INGS.length} ingredientes</p>
+        </div>
+        <div style={{display:"flex",gap:6,fontSize:10,color:G.textMut}}>
+          {Object.entries(SM).map(([k,m])=><span key={k} style={{display:"flex",alignItems:"center",gap:2}}>{m.icon} {k==="in_season"?"Temporada":k==="year_round"?"Atemporal":"Fuera"}</span>)}
+        </div>
+      </div>
+
+      {/* Main layout — split when selected, full-width when not */}
+      <div style={{display:"flex",gap:0,transition:"all .3s",alignItems:"flex-start"}}>
+        {/* Ingredients */}
+        <div style={{width:isSplit?(mob?"100%":"52%"):"100%",transition:"width .3s ease",flexShrink:0,paddingRight:isSplit&&!mob?24:0,overflow:"hidden"}}>
+          {IngredientsPanel}
+        </div>
+        {/* Pairings — only when selected */}
+        {isSplit&&!mob&&<div style={{flex:1,minWidth:0,opacity:1,transition:"opacity .3s",paddingLeft:24,borderLeft:`1px solid ${G.brd}`}}>
+          {PairingsPanel}
+        </div>}
+      </div>
+      {/* Mobile: pairings below */}
+      {isSplit&&mob&&<div style={{marginTop:16,borderTop:`1px solid ${G.brd}`,paddingTop:16}}>
+        {PairingsPanel}
+      </div>}
+    </div>
+  );
+}
+
+
+
+function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
+  const[labTab,setLabTab]=useState("wheel"); // wheel | need
+  const[selected,setSelected]=useState([]);
+  const[hoverIng,setHoverIng]=useState(null);
+  const[activePair,setActivePair]=useState(null);
+  const[concept,setConcept]=useState(null);
+  const[loading,setLoading]=useState(false);
+  const[mode,setMode]=useState("todo");
+  const[activeCat,setActiveCat]=useState(null);
+  const[catSearch,setCatSearch]=useState("");
+  const[customIngs,setCustomIngs]=useState({});
+
+  const addCustomIng=(sectorId,name)=>{
+    const n=name.trim(); if(!n)return;
+    setCustomIngs(p=>({...p,[sectorId]:[...(p[sectorId]||[]),n]}));
+    setSelected(p=>p.includes(n)?p:p.length<8?[...p,n]:p);
+  };
+  // Zoom & pan
+  const[zoom,setZoom]=useState(1);
+  const[pan,setPan]=useState({x:0,y:0});
+  const dragRef=useRef({active:false,startX:0,startY:0,startPanX:0,startPanY:0});
+  // Recipe builder — 3 modes: free | repo | web
+  const[builderMode,setBuilderMode]=useState("free");
+  const[freeInput,setFreeInput]=useState("");
+  const[freeList,setFreeList]=useState([]);
+  const[selRecipeId,setSelRecipeId]=useState("");
+  // Web search
+  const[webQuery,setWebQuery]=useState("");
+  const[selSources,setSelSources]=useState(["nyt","serious","epicur","bonapp","nestle"]);
+  const[webResults,setWebResults]=useState([]);
+  const[webLoading,setWebLoading]=useState(false);
+  const[webError,setWebError]=useState("");
+  const[showSources,setShowSources]=useState(false);
+  // Ingredients from web result
+  const[webIngList,setWebIngList]=useState([]);
+
+  const toggle=name=>{setSelected(p=>p.includes(name)?p.filter(x=>x!==name):p.length<8?[...p,name]:p);setActivePair(null);};
+  const BAR_IDS=["spirits","bar"];
+  const knownPairs=[];
+  for(let i=0;i<selected.length;i++)for(let j=i+1;j<selected.length;j++){const aff=getAff(selected[i],selected[j]);if(aff)knownPairs.push({a:selected[i],b:selected[j],aff});}
+
+  // Zoom/pan handlers
+  const onWheel=e=>{e.preventDefault();const d=e.deltaY>0?0.85:1.15;setZoom(z=>Math.min(4,Math.max(0.4,z*d)));};
+  const onMouseDown=e=>{dragRef.current={active:true,startX:e.clientX,startY:e.clientY,startPanX:pan.x,startPanY:pan.y};};
+  const onMouseMove=e=>{if(!dragRef.current.active)return;setPan({x:dragRef.current.startPanX+e.clientX-dragRef.current.startX,y:dragRef.current.startPanY+e.clientY-dragRef.current.startY});};
+  const onMouseUp=()=>{dragRef.current.active=false;};
+  const resetView=()=>{setZoom(1);setPan({x:0,y:0});};
+
+  // Free ingredients
+  const addFreeIng=()=>{if(!freeInput.trim())return;setFreeList(p=>[...p,freeInput.trim()]);setFreeInput("");};
+
+  // Repo ingredients
+  const selRecipe=recipes.find(r=>r.id===selRecipeId);
+  const recipeIngs=selRecipe?aggIng(selRecipe).map(i=>i.name):[];
+
+  // Toggle source
+  const toggleSource=id=>setSelSources(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]);
+
+  // Web recipe search
+  const searchWeb=async()=>{
+    if(!webQuery.trim())return;
+    setWebLoading(true);setWebResults([]);setWebError("");
+    const active=RECIPE_SOURCES.filter(s=>selSources.includes(s.id));
+    const srcStr=active.length>0
+      ?`Busca prioritariamente en: ${active.map(s=>`${s.name} (${s.domain})`).join(", ")}.`
+      :"Busca en las mejores fuentes gastronómicas del mundo.";
+    try{
+      const res=await fetch(AI_URL,{
+        method:"POST", headers:AHEADERS(),
+        body:JSON.stringify({
+          model:"claude-sonnet-4-6",max_tokens:2000,
+          tools:[{type:"web_search_20250305",name:"web_search"}],
+          system:`Eres un buscador experto de recetas gastronómicas. ${srcStr} Cuando encuentres recetas, devuelve ÚNICAMENTE un array JSON válido con este formato exacto sin texto adicional: [{"name":"nombre de la receta","source":"nombre de la fuente","url":"URL completa y válida","ingredients":["ingrediente 1","ingrediente 2","ingrediente 3","ingrediente 4","ingrediente 5"],"description":"descripción breve del plato en 1 frase"}]. Máximo 5 resultados. Responde SOLO con el JSON, sin explicaciones.`,
+          messages:[{role:"user",content:`Busca recetas de: "${webQuery}"`}]
+        })
+      });
+      const data=await res.json();
+      const texts=(data.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
+      const m=texts.match(/\[[\s\S]*?\]/);
+      if(m){
+        const parsed=JSON.parse(m[0]);
+        setWebResults(parsed);
+      } else {
+        setWebError("No se encontraron resultados. Prueba con otro término.");
+      }
+    }catch(e){setWebError("Error de búsqueda. Verifica tu conexión a internet.");}
+    setWebLoading(false);
+  };
+
+  // Current builder ingredients
+  const builderIngs = builderMode==="free" ? freeList
+    : builderMode==="repo" ? recipeIngs
+    : webIngList;
+
+  // All ingredients for spark
+  const allIngsForSpark=[...new Set([...selected,...builderIngs])];
+
+  const generateConcept=async()=>{
+    if(allIngsForSpark.length<2)return;
+    setLoading(true);setConcept(null);
+    const ctx=allIngsForSpark.map(name=>{const s=SECTORS.find(sec=>sec.ings.includes(name));return`${name}${s?` (familia: ${s.name})`:""}`;});
+    try{
+      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:2500,system:"Eres el asistente creativo de un chef de nivel mundial. Dominas Niki Segnit y François Chartier. Respondes SIEMPRE con JSON válido puro, sin texto extra, sin backticks. Sé conciso.",messages:[{role:"user",content:`Ingredientes: ${ctx.join(", ")}\n\nGenera 3 conceptos de alta cocina o coctelería. Responde SOLO con JSON válido (máximo 120 palabras por campo):\n[\n  {\n    "nombre": "Nombre poético",\n    "descripcion": "Una frase de la esencia",\n    "logica": "Lógica aromática molecular estilo Chartier (conciso)",\n    "tecnica": "Técnica y emplatado (conciso)"\n  }\n]`}]})});
+      const data=await res.json();
+      if(!res.ok){ setConcept(`Error ${res.status}: ${data?.error?.message||JSON.stringify(data)}`); setLoading(false); return; }
+      const raw=(data.content?.[0]?.text||"").replace(/```json\n?|```\n?/g,"").trim();
+      // Extract JSON array, repair if truncated
+      const parseJson=str=>{
+        const m=str.match(/\[[\s\S]*\]/);
+        if(m)try{return JSON.parse(m[0]);}catch(e){}
+        // Repair truncated JSON: find last complete object
+        const lastClose=str.lastIndexOf('"}');
+        if(lastClose>0){try{return JSON.parse(str.slice(0,lastClose+2)+"]");}catch(e){}}
+        return null;
+      };
+      const parsed=parseJson(raw);
+      setConcept(parsed||raw||"Respuesta vacía — intenta de nuevo.");
+    }catch(e){setConcept(`Error de red: ${e.message}`);}
+    setLoading(false);
+  };
+
+  const affCol=t=>t==="c"?G.gold:t==="m"?G.blue:"#7C3AED";
+  const affLabel=t=>t==="c"?"Clásico":t==="m"?"Molecular":"Sorprendente";
+
+  return(
+    <div style={{maxWidth:1400,margin:"0 auto",padding:"40px 32px 60px"}}>
+      {/* Header + Tab switcher */}
+      <div style={{marginBottom:28}}>
+        <p style={{fontFamily:FB,fontSize:10,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Laboratorio de Sabores</p>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:14}}>
+          <h1 style={{fontFamily:FH,fontSize:34,color:G.text,margin:0,fontWeight:700,letterSpacing:-.5}}>
+            {labTab==="wheel"?"Rueda Aromática":"Desde la Necesidad"}
+          </h1>
+          {/* Main tabs */}
+          <div style={{display:"flex",gap:0,background:G.surf,borderRadius:8,padding:3}}>
+            {[["wheel","🎯 Rueda Aromática"],["need","💡 Desde la Necesidad"],["pairings","🔬 Pairings"],["vinagreta","🥗 Vinagretas"]].map(([id,label])=>(
+              <button key={id} onClick={()=>setLabTab(id)} style={{padding:"8px 16px",border:"none",borderRadius:6,background:labTab===id?G.w:"transparent",color:labTab===id?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:labTab===id?700:400,boxShadow:labTab===id?"0 1px 4px rgba(0,0,0,.08)":"none",transition:"all .15s"}}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── PESTAÑA: DESDE LA NECESIDAD ── */}
+      {labTab==="need"&&<NecesidadLab onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>}
+      {labTab==="pairings"&&<PairingsLab recipes={recipes}/>}
+      {labTab==="vinagreta"&&<VinagretaBuilder onSaveRecipe={r=>{onAddRecipe&&onAddRecipe(r);}}/>}
+
+      {/* ── PESTAÑA: RUEDA AROMÁTICA ── */}
+      {labTab==="wheel"&&<>
+      {/* Legend */}
+      <div style={{display:"flex",gap:20,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+        {[["c",G.gold,"Clásico"],["m",G.blue,"Molecular"],["s","#7C3AED","Sorprendente"]].map(([t,col,label])=>(
+          <div key={t} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:G.textMid,fontFamily:FB}}>
+            <div style={{width:20,height:2.5,background:col,borderRadius:2}}/>
+            <span>{label}</span>
+          </div>
+        ))}
+        {selected.length>0&&<span style={{marginLeft:"auto",fontSize:11,color:G.textMut,fontFamily:FB}}>{selected.length} seleccionado{selected.length!==1?"s":""} · {knownPairs.length} afinidad{knownPairs.length!==1?"es":""}</span>}
+      </div>
+      {/* Mode buttons */}
+      <div style={{display:"flex",gap:6,marginBottom:20}}>
+        {[["cocina","Cocina"],["bar","Bar"],["todo","Cocina + Bar"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setMode(id)} style={{...bv("ghost",{padding:"7px 14px",fontSize:11,borderRadius:6}),background:mode===id?G.blue:"transparent",color:mode===id?G.w:G.textMid,borderColor:mode===id?G.blue:G.brd}}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:24,alignItems:"start"}}>
+
+        {/* LEFT — Wheel with zoom */}
+        <div style={{border:`1px solid ${G.brd}`,borderRadius:12,overflow:"hidden",background:G.w,boxShadow:"0 2px 12px rgba(0,0,0,.04)"}}>
+          {/* Zoom controls */}
+          <div style={{padding:"10px 16px",borderBottom:`1px solid ${G.brd}`,display:"flex",alignItems:"center",gap:8,background:G.surf}}>
+            <span style={{fontFamily:FB,fontSize:10,color:G.textMut,letterSpacing:1,textTransform:"uppercase",fontWeight:600,flex:1}}>Clic para seleccionar · Arrastra · Rueda = zoom</span>
+            <div style={{display:"flex",gap:4}}>
+              {[["−",()=>setZoom(z=>Math.max(0.4,z*0.8))],["⊙",resetView],["+",()=>setZoom(z=>Math.min(4,z*1.25))]].map(([label,fn])=>(
+                <button key={label} onClick={fn} style={{width:28,height:28,border:`1px solid ${G.brd}`,borderRadius:6,background:G.w,cursor:"pointer",fontFamily:FB,fontSize:12,color:G.textMid,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}
+                  onMouseOver={e=>{e.currentTarget.style.borderColor=G.blue;e.currentTarget.style.color=G.blue;}} onMouseOut={e=>{e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.color=G.textMid;}}>
+                  {label}
+                </button>
+              ))}
+              <span style={{fontSize:10,color:G.textMut,alignSelf:"center",minWidth:36,textAlign:"center",fontFamily:FB}}>{Math.round(zoom*100)}%</span>
+            </div>
+          </div>
+          {/* Wheel container */}
+          <div style={{overflow:"hidden",cursor:dragRef.current.active?"grabbing":"grab",display:"flex",alignItems:"center",justifyContent:"center",background:G.w,userSelect:"none"}}
+            onWheel={onWheel} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
+            <div style={{transform:`scale(${zoom}) translate(${pan.x/zoom}px,${pan.y/zoom}px)`,transformOrigin:"center center",transition:dragRef.current.active?"none":"transform .1s",width:"100%"}}>
+              <FlavorWheel sectors={SECTORS} selected={selected} hoverIng={hoverIng} onToggle={toggle} onHover={setHoverIng} mode={mode} onCatClick={id=>{setActiveCat(id);setCatSearch("");}} />
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT panel */}
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          {activeCat ? (
+            <CategoryBrowser
+              cat={SECTORS.find(s=>s.id===activeCat)}
+              extended={[...(ING_EXTENDED[activeCat]||[]),...(customIngs[activeCat]||[])]}
+              custom={customIngs[activeCat]||[]}
+              selected={selected}
+              onToggle={toggle}
+              onClose={()=>setActiveCat(null)}
+              search={catSearch}
+              setSearch={setCatSearch}
+              onAddCustom={name=>addCustomIng(activeCat,name)}
+            />
+          ) : (<>
+
+          {/* Recipe Builder */}
+          <div style={{border:`1px solid ${G.brd}`,borderRadius:12,overflow:"hidden",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+            <div style={{padding:"14px 18px",borderBottom:`1px solid ${G.brd}`,background:G.surf}}>
+              <p style={{fontFamily:FH,fontSize:16,color:G.text,margin:"0 0 2px",fontWeight:700}}>Constructor de Receta</p>
+              <p style={{fontFamily:FB,fontSize:10,color:G.textMut,margin:0}}>Libre · Mi Repositorio · Búsqueda Web</p>
+            </div>
+            <div style={{padding:"14px 18px"}}>
+              {/* Mode tabs */}
+              <div style={{display:"flex",gap:4,marginBottom:14,background:G.surf,padding:3,borderRadius:8}}>
+                {[["free","Libre"],["repo","Repositorio"],["web","Buscar en Web"]].map(([id,label])=>(
+                  <button key={id} onClick={()=>setBuilderMode(id)} style={{flex:1,padding:"6px 8px",border:"none",borderRadius:6,background:builderMode===id?G.w:"transparent",color:builderMode===id?G.blue:G.textMut,cursor:"pointer",fontFamily:FB,fontSize:11,fontWeight:builderMode===id?700:400,boxShadow:builderMode===id?"0 1px 4px rgba(0,0,0,.08)":"none",transition:"all .15s"}}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* FREE */}
+              {builderMode==="free"&&(
+                <div>
+                  <div style={{display:"flex",gap:6,marginBottom:10}}>
+                    <input value={freeInput} onChange={e=>setFreeInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addFreeIng()} placeholder="Escribe un ingrediente y pulsa Enter…" style={inp({flex:1,padding:"7px 11px",fontSize:12})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                    <button onClick={addFreeIng} style={bv("p",{padding:"7px 12px",fontSize:13,borderRadius:6,fontWeight:700})}>+</button>
+                  </div>
+                  {freeList.length>0
+                    ?<div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {freeList.map(n=><span key={n} style={{background:G.blueTint,border:`1px solid ${G.blue}30`,color:G.blue,padding:"3px 10px",borderRadius:20,fontSize:11,fontFamily:FB,display:"flex",alignItems:"center",gap:5}}>
+                          {n}<button onClick={()=>setFreeList(p=>p.filter(x=>x!==n))} style={{background:"none",border:"none",color:G.blue,cursor:"pointer",fontSize:12,padding:0,lineHeight:1}}>×</button>
+                        </span>)}
+                      </div>
+                    :<p style={{color:G.textMut,fontSize:11,fontFamily:FB,fontStyle:"italic"}}>Escribe ingredientes y pulsa Enter para añadir</p>}
+                </div>
+              )}
+
+              {/* REPO */}
+              {builderMode==="repo"&&(
+                <div>
+                  <select value={selRecipeId} onChange={e=>setSelRecipeId(e.target.value)} style={inp({marginBottom:10,cursor:"pointer",fontSize:12})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}>
+                    <option value="">Seleccionar receta del repositorio…</option>
+                    {recipes.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                  {recipeIngs.length>0
+                    ?<div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {recipeIngs.map(n=><span key={n} style={{background:G.surf,border:`1px solid ${G.brd}`,color:G.textMid,padding:"3px 9px",borderRadius:20,fontSize:10,fontFamily:FB}}>{n}</span>)}
+                      </div>
+                    :<p style={{color:G.textMut,fontSize:11,fontFamily:FB,fontStyle:"italic"}}>{selRecipeId?"Sin ingredientes":"Elige una receta para cargar sus ingredientes"}</p>}
+                </div>
+              )}
+
+              {/* WEB SEARCH */}
+              {builderMode==="web"&&(
+                <div>
+                  {/* Source selector */}
+                  <div style={{marginBottom:12}}>
+                    <button onClick={()=>setShowSources(p=>!p)} style={{...bv("ghost",{fontSize:11,padding:"5px 12px",borderRadius:6,width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center"})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
+                      <span>{selSources.length} fuente{selSources.length!==1?"s":""}  seleccionada{selSources.length!==1?"s":""}</span>
+                      <span style={{fontSize:9,color:G.textMut}}>{showSources?"▲ Ocultar":"▼ Ver las 20 fuentes"}</span>
+                    </button>
+                    {showSources&&(
+                      <div style={{border:`1px solid ${G.brd}`,borderRadius:8,padding:"12px",marginTop:6,display:"flex",flexWrap:"wrap",gap:5,maxHeight:160,overflowY:"auto"}}>
+                        {RECIPE_SOURCES.map(s=>{
+                          const on=selSources.includes(s.id);
+                          return(
+                            <button key={s.id} onClick={()=>toggleSource(s.id)} style={{padding:"3px 10px",border:`1px solid ${on?G.blue:G.brd}`,borderRadius:20,background:on?G.blueTint:G.w,color:on?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:10,fontWeight:on?600:400,transition:"all .12s"}}>
+                              {on?"✓ ":""}{s.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  {/* Search bar */}
+                  <div style={{display:"flex",gap:6,marginBottom:10}}>
+                    <input value={webQuery} onChange={e=>setWebQuery(e.target.value)} onKeyDown={e=>e.key==="Enter"&&searchWeb()} placeholder="Buscar receta… ej: risotto de trufa" style={inp({flex:1,padding:"8px 12px",fontSize:12})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
+                    <button onClick={searchWeb} disabled={webLoading} style={bv("p",{padding:"8px 14px",fontSize:11,borderRadius:6,opacity:webLoading?.6:1})} onMouseOver={e=>{if(!webLoading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                      {webLoading?"…":"Buscar"}
+                    </button>
+                  </div>
+                  {/* Error */}
+                  {webError&&<p style={{color:G.red,fontSize:11,fontFamily:FB,margin:"0 0 8px"}}>{webError}</p>}
+                  {/* Loading */}
+                  {webLoading&&<p style={{color:G.textMut,fontSize:11,fontFamily:FB,fontStyle:"italic"}}>Buscando en la web…</p>}
+                  {/* Results */}
+                  {webResults.length>0&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                      {webResults.map((r,i)=>(
+                        <div key={i} style={{border:`1px solid ${G.brd}`,borderRadius:8,padding:"10px 12px",background:G.surf}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:4}}>
+                            <div>
+                              {r.url
+                                ?<a href={r.url} target="_blank" rel="noopener noreferrer" style={{fontFamily:FH,fontSize:13,color:G.blue,fontWeight:700,textDecoration:"none"}}>{r.name}</a>
+                                :<span style={{fontFamily:FH,fontSize:13,color:G.text,fontWeight:700}}>{r.name}</span>}
+                              {r.source&&<span style={{display:"block",fontSize:10,color:G.textMut,fontFamily:FB}}>{r.source}</span>}
+                            </div>
+                            <button onClick={()=>setWebIngList(r.ingredients||[])} style={bv("p",{padding:"4px 10px",fontSize:10,borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                              Usar
+                            </button>
+                          </div>
+                          {r.description&&<p style={{margin:"0 0 6px",fontSize:11,color:G.textMid,fontFamily:FB,lineHeight:1.5}}>{r.description}</p>}
+                          {r.ingredients?.length>0&&(
+                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                              {r.ingredients.slice(0,6).map(n=><span key={n} style={{background:G.brd+"44",color:G.textMid,padding:"2px 7px",borderRadius:20,fontSize:9,fontFamily:FB}}>{n}</span>)}
+                              {r.ingredients.length>6&&<span style={{color:G.textMut,fontSize:9,fontFamily:FB,alignSelf:"center"}}>+{r.ingredients.length-6} más</span>}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {/* Web ingredients in use */}
+                  {webIngList.length>0&&(
+                    <div style={{marginTop:10,padding:"10px 12px",background:G.blueTint,border:`1px solid ${G.blue}20`,borderRadius:8}}>
+                      <p style={{fontFamily:FB,fontSize:10,color:G.blue,fontWeight:600,margin:"0 0 6px",letterSpacing:.5,textTransform:"uppercase"}}>Ingredientes cargados</p>
+                      <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
+                        {webIngList.map(n=><span key={n} style={{background:G.w,border:`1px solid ${G.blue}30`,color:G.blue,padding:"3px 9px",borderRadius:20,fontSize:10,fontFamily:FB,display:"flex",alignItems:"center",gap:4}}>
+                          {n}<button onClick={()=>setWebIngList(p=>p.filter(x=>x!==n))} style={{background:"none",border:"none",color:G.blue,cursor:"pointer",fontSize:11,padding:0,lineHeight:1}}>×</button>
+                        </span>)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Selected from wheel */}
+          <div style={{border:`1px solid ${G.brd}`,borderRadius:12,padding:"14px 18px",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+            <p style={{fontFamily:FH,fontSize:15,color:G.text,margin:"0 0 10px",fontWeight:700}}>Selección en Rueda</p>
+            {selected.length===0
+              ?<p style={{color:G.textMut,fontSize:11,margin:0,fontStyle:"italic",fontFamily:FB}}>Haz clic en ingredientes de la rueda</p>
+              :<><div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:10}}>
+                  {selected.map(name=>{const sec=SECTORS.find(s=>s.ings.includes(name));return(
+                    <button key={name} onClick={()=>toggle(name)} style={{background:sec?.col+"15",border:`1px solid ${sec?.col}44`,color:G.text,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:FB,fontSize:11,display:"flex",alignItems:"center",gap:5}}>
+                      {name}<span style={{color:sec?.col,fontSize:10}}>×</span>
+                    </button>
+                  );})}
+                </div>
+                <button onClick={()=>{setSelected([]);setActivePair(null);setConcept(null);}} style={{...bv("ghost",{fontSize:10,padding:"3px 10px",borderRadius:6,color:G.red,borderColor:G.red+"44"})}}>Limpiar</button>
+              </>}
+          </div>
+
+          {/* Affinities */}
+          {knownPairs.length>0&&(
+            <div style={{border:`1px solid ${G.brd}`,borderRadius:12,padding:"14px 18px",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+              <p style={{fontFamily:FH,fontSize:15,color:G.text,margin:"0 0 10px",fontWeight:700}}>Afinidades Detectadas</p>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {knownPairs.map(({a,b,aff})=>{
+                  const col=affCol(aff.t);
+                  const isAct=activePair?.a===a&&activePair?.b===b;
+                  return(
+                    <button key={a+b} onClick={()=>setActivePair(isAct?null:{a,b,aff})} style={{background:isAct?col+"0C":"transparent",border:`1px solid ${isAct?col+"44":G.brd}`,borderRadius:8,padding:"10px 12px",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:isAct?4:0}}>
+                        <span style={{background:col+"18",border:`1px solid ${col}44`,borderRadius:20,padding:"1px 8px",fontSize:9,color:col,fontWeight:700,fontFamily:FB}}>{affLabel(aff.t)}</span>
+                        <span style={{fontFamily:FH,fontSize:13,color:G.text,fontWeight:600}}>{a} × {b}</span>
+                      </div>
+                      {aff.mol&&<div style={{fontSize:9,color:col,marginBottom:isAct?4:0,fontFamily:FB,fontWeight:500}}>Molécula: {aff.mol}</div>}
+                      {isAct&&<p style={{margin:0,fontSize:11,color:G.textMid,lineHeight:1.7,fontFamily:FB}}>{aff.note}</p>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Spark */}
+          {allIngsForSpark.length>=2&&(
+            <div style={{border:`1px solid ${G.brd}`,borderRadius:12,padding:"16px 18px",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:concept||loading?14:0}}>
+                <div>
+                  <p style={{fontFamily:FH,fontSize:16,color:G.text,margin:"0 0 2px",fontWeight:700}}>Spark de Concepto</p>
+                  <p style={{fontFamily:FB,fontSize:10,color:G.textMut,margin:0}}>3 recetas · estilo Segnit & Chartier</p>
+                </div>
+                <button onClick={generateConcept} disabled={loading} style={bv("p",{padding:"8px 16px",fontSize:11,opacity:loading?.65:1,borderRadius:6})} onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                  {loading?"Generando…":"✦ Generar"}
+                </button>
+              </div>
+              {loading&&<div style={{textAlign:"center",padding:"20px",color:G.textMut,fontSize:12,fontStyle:"italic",fontFamily:FB}}>Explorando familias aromáticas…</div>}
+              {/* Error string */}
+              {concept&&typeof concept==="string"&&(
+                <div style={{background:"#FFF0F0",border:`1px solid ${G.red}30`,borderRadius:8,padding:"12px 14px",fontSize:12,color:G.red,fontFamily:FB}}>{concept}</div>
+              )}
+              {/* Recipe cards list */}
+              {concept&&Array.isArray(concept)&&(
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {concept.map((c,i)=><SparkCard key={i} card={c} index={i} defaultOpen={i===0} onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>)}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Instructions */}
+          {selected.length===0&&builderIngs.length===0&&(
+            <div style={{border:`1px solid ${G.brd}`,borderRadius:12,padding:"16px 18px",background:G.surf}}>
+              <p style={{fontFamily:FB,fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:10}}>Cómo usar</p>
+              {["Selecciona hasta 8 ingredientes en la rueda haciendo clic","Usa el constructor para añadir ingredientes libres o jalar una receta del repositorio","El botón Generar crea un concepto de plato o cóctel inspirado en Segnit y Chartier","Cambia entre Cocina, Bar o Cocina + Bar según lo que explores"].map((t,i)=>(
+                <div key={i} style={{display:"flex",gap:10,marginBottom:6,alignItems:"flex-start"}}>
+                  <span style={{background:G.blue,color:G.w,width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:700,flexShrink:0,marginTop:1,fontFamily:FH}}>{i+1}</span>
+                  <p style={{margin:0,fontSize:11,color:G.textMid,lineHeight:1.6,fontFamily:FB}}>{t}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          </>)}
+        </div>
+      </div>
+      </>}
+    </div>
+  );
+}
+
+/* ══ NECESIDAD LAB ══ */
+const QUICK_FILTERS=[
+  {group:"Tipo",items:["Entrada","Sopa","Ensalada","Plato principal","Postre","Desayuno","Merienda","Snack","Para compartir"]},
+  {group:"Para quién",items:["Para niños","Para bebés (6m+)","Para adultos","Para una cita","Para una reunión","Para un buffet"]},
+  {group:"Restricciones",items:["Saludable","Vegetariano","Vegano","Sin gluten","Sin lactosa","Sin mariscos","Sin frutos secos","Bajo en calorías","Alto en proteína","Keto"]},
+  {group:"Tiempo",items:["Rápido (< 30 min)","Rápido (< 45 min)","Media hora","Para el fin de semana","Requiere marinado"]},
+  {group:"Estilo",items:["Económico","Gourmet","Tradicional","Fusión","Peruano","Mediterráneo","Asiático","Mexicano"]},,
+{id:"r5",name:"Causa de Pulpo al Olivo",category:"Entradas",portions:4,photo:null,cutlery:["fork_knife"],colls:[],plating:"Causa desmoldada en plato frío. Capas visibles: base y tapa de masa amarilla, relleno de pulpo al olivo. Cubierta con láminas de palta, medias lunas de huevo duro y tiras de pimiento.",steps:[
+  {id:"s14",name:"Masa de Causa",method:"Papa amarilla cocida con cáscara, pelada en caliente. Aplastar con prensapapas. Incorporar ají amarillo, limón, aceite y sal. Amasar hasta masa homogénea.",ingredients:[{id:"i44",name:"Papa amarilla",quantity:800,unit:"g",yieldPct:78},{id:"i45",name:"Pasta de ají amarillo",quantity:60,unit:"g",yieldPct:100},{id:"i46",name:"Jugo de limón",quantity:40,unit:"ml",yieldPct:70},{id:"i47",name:"Aceite vegetal",quantity:30,unit:"ml",yieldPct:100}]},
+  {id:"s15",name:"Relleno de Pulpo al Olivo",method:"Pulpo cocido cortado en cubos pequeños. Mezclar con salsa al olivo (mayonesa + pasta de aceituna negra), sal y pimienta.",ingredients:[{id:"i48",name:"Pulpo cocido",quantity:400,unit:"g",yieldPct:90},{id:"i49",name:"Mayonesa",quantity:80,unit:"g",yieldPct:100},{id:"i50",name:"Pasta de aceituna negra",quantity:40,unit:"g",yieldPct:100}]},
+  {id:"s16",name:"Armado",method:"Forrar molde con film. Capa de masa (1.5cm), relleno de pulpo, segunda capa de masa. Prensar y refrigerar 30 min. Desmoldar, decorar con palta, huevo y pimiento.",ingredients:[{id:"i51",name:"Palta",quantity:1,unit:"unid",yieldPct:75},{id:"i52",name:"Huevo duro",quantity:2,unit:"unid",yieldPct:88}]}
+]}
+];
+
 function NecesidadLab({onAddRecipe,onOpenRecipes}){
   const[query,setQuery]=useState("");
   const[selFilters,setSelFilters]=useState([]);
