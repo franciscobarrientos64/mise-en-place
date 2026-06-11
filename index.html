@@ -173,7 +173,7 @@ const arcForLabel=(s,e)=>{const mid=((s+e)/2%360+360)%360,cw=mid<90||mid>270,r=R
 
 /* ══ HELPERS ══ */
 const gid=()=>Math.random().toString(36).substr(2,9);
-const APP_VERSION=33;
+const APP_V=34;
 const pQty=(q,y)=>{const qn=parseFloat(q),yn=parseFloat(y);return(!yn||isNaN(qn))?0:qn/(yn/100);};
 const fmtN=(n,d=2)=>{const v=parseFloat(n);return isNaN(v)?"—":v.toLocaleString("es",{minimumFractionDigits:d,maximumFractionDigits:d});};
 const aggIng=recipe=>{const m={};recipe.steps.forEach(s=>s.ingredients.forEach(i=>{const k=`${i.name.trim()}__${i.unit}`;if(m[k])m[k]={...m[k],quantity:(parseFloat(m[k].quantity)||0)+(parseFloat(i.quantity)||0)};else m[k]={...i,key:k,quantity:parseFloat(i.quantity)||0};}));return Object.values(m);};
@@ -393,10 +393,7 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd,sbSyncing,sbReady,onRefres
     <header style={{background:G.w,borderBottom:`1px solid ${G.brd}`,padding:mob?"0 16px":"0 32px",height:mob?52:56,display:"flex",alignItems:"center",gap:mob?8:16,position:"sticky",top:0,zIndex:50}}>
       {nav==="recipes"&&view!=="gallery"
         ?<button onClick={onBack} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontFamily:FB,fontSize:13,padding:"4px 0",flexShrink:0}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=G.textMut}>← Volver</button>
-        :<div style={{display:"flex",alignItems:"baseline",gap:mob?5:8,flexShrink:0}}>
-            <span style={{fontFamily:FH,fontSize:mob?12:15,color:G.text,letterSpacing:mob?2:4,fontWeight:700}}>MISE EN PLACE</span>
-            <span style={{fontFamily:FB,fontSize:mob?8:9,color:G.textMut,letterSpacing:.5,fontWeight:600,opacity:.7}}>v1.{APP_VERSION}</span>
-          </div>}
+        :<span style={{fontFamily:FH,fontSize:mob?12:15,color:G.text,letterSpacing:mob?2:4,fontWeight:700,flexShrink:0}}>MISE EN PLACE <span style={{fontSize:mob?7:8,fontWeight:500,opacity:.55,letterSpacing:.5}}>v1.{APP_V}</span></span>}
       {!mob&&recName&&<><span style={{color:G.brd,fontSize:14}}>·</span><span style={{fontFamily:FB,fontSize:12,color:G.textMut,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180}}>{recName}</span></>}
       <nav style={{display:"flex",gap:0,marginLeft:"auto",alignItems:"center"}}>
         {NAV.map(([id,label,icon])=>(
