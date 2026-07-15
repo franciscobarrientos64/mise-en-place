@@ -5,43 +5,43 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Mise en Place</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <!-- Pinned to Babel 7: v8 defaults preset-react to the automatic JSX runtime, which emits ESM `import` and breaks this classic (non-module) script -> blank page -->
 <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;background:#fff}
+  html,body{height:100%;background:#F3F1EC}
   #root{min-height:100vh}
   ::-webkit-scrollbar{width:5px;height:5px}
-  ::-webkit-scrollbar-track{background:#f5f5f5}
-  ::-webkit-scrollbar-thumb{background:#d0d8e8;border-radius:3px}
-  ::-webkit-scrollbar-thumb:hover{background:#1B4FD8}
+  ::-webkit-scrollbar-track{background:#ECE8DF}
+  ::-webkit-scrollbar-thumb{background:#D2CBBB;border-radius:3px}
+  ::-webkit-scrollbar-thumb:hover{background:#4F6146}
   input[type=number]::-webkit-inner-spin-button{opacity:.6}
-  select option{background:#fff;color:#0A0F1A}
-  ::selection{background:#1B4FD820;color:#1B4FD8}
+  select option{background:#FCFBF8;color:#17150F}
+  ::selection{background:#4F614622;color:#3E4E37}
   /* ── Indicador flotante de subida (estilo Drive) ── */
   @keyframes mep-up-spin{to{transform:rotate(360deg)}}
   @keyframes mep-up-in{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
   .mep-up{position:fixed;right:20px;bottom:20px;width:340px;max-width:calc(100vw - 32px);z-index:90;animation:mep-up-in .32s cubic-bezier(.16,1,.3,1) both}
-  .mep-up-card{background:#fff;border:1px solid #E2E8F0;border-radius:14px;box-shadow:0 6px 24px rgba(10,15,26,.12),0 2px 6px rgba(10,15,26,.07);overflow:hidden}
+  .mep-up-card{background:#FCFBF8;border:1px solid #E3DED2;border-radius:14px;box-shadow:0 6px 24px rgba(23,21,15,.12),0 2px 6px rgba(23,21,15,.07);overflow:hidden}
   .mep-up-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 12px 13px 16px}
   .mep-up-heading{display:flex;align-items:center;gap:10px;min-width:0}
-  .mep-up-title{font-family:"Space Grotesk",sans-serif;font-size:14px;font-weight:600;letter-spacing:-.01em;color:#0A0F1A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .mep-up-spin{width:16px;height:16px;flex:none;border-radius:50%;border:2px solid #F0F4FF;border-top-color:#1B4FD8;animation:mep-up-spin .7s linear infinite}
+  .mep-up-title{font-family:"Space Grotesk",sans-serif;font-size:14px;font-weight:600;letter-spacing:-.01em;color:#17150F;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mep-up-spin{width:16px;height:16px;flex:none;border-radius:50%;border:2px solid #E1E7D8;border-top-color:#4F6146;animation:mep-up-spin .7s linear infinite}
   .mep-up-icon{width:18px;height:18px;flex:none;display:grid;place-items:center}
   .mep-up-actions{display:flex;align-items:center;gap:2px;flex:none}
   .mep-up-btn{display:grid;place-items:center;width:30px;height:30px;border:none;border-radius:8px;background:transparent;color:#8898AA;cursor:pointer;transition:background .15s,color .15s,transform .1s}
-  .mep-up-btn:hover{background:#F7F9FC;color:#0A0F1A}
+  .mep-up-btn:hover{background:#ECE8DF;color:#17150F}
   .mep-up-btn:active{transform:scale(.92)}
-  .mep-up-btn:focus-visible{outline:2px solid #1B4FD8;outline-offset:1px}
+  .mep-up-btn:focus-visible{outline:2px solid #4F6146;outline-offset:1px}
   .mep-up-body{padding:0 16px 16px;max-height:120px;overflow:hidden;transition:max-height .3s cubic-bezier(.16,1,.3,1),opacity .2s ease,padding .3s ease}
   .mep-up-body.mep-up-collapsed{max-height:0;padding-top:0;padding-bottom:0;opacity:0}
-  .mep-up-track{height:6px;background:#EDF1F7;border-radius:999px;overflow:hidden}
+  .mep-up-track{height:6px;background:#ECE8DF;border-radius:999px;overflow:hidden}
   .mep-up-fill{height:100%;width:0;border-radius:999px;transition:width .35s cubic-bezier(.16,1,.3,1),background .25s ease}
   .mep-up-stats{display:flex;align-items:baseline;justify-content:space-between;margin-top:10px;font-size:13px;color:#4A5568;font-variant-numeric:tabular-nums}
-  .mep-up-count strong{color:#0A0F1A;font-weight:600}
+  .mep-up-count strong{color:#17150F;font-weight:600}
   @media(max-width:600px){.mep-up{right:12px;left:12px;bottom:12px;width:auto;max-width:none}}
   @media(prefers-reduced-motion:reduce){.mep-up{animation-duration:.01ms}.mep-up-fill,.mep-up-body,.mep-up-btn{transition:none}.mep-up-spin{animation-duration:1.4s}}
 </style>
@@ -69,16 +69,20 @@ const loadPairings=async(ingredient)=>{const r=await fetch(SB_URL+'/flavor_pairi
 const savePairing=async(p)=>fetch(SB_URL+'/flavor_pairings',{method:'POST',headers:{...SB_H(),'Prefer':'resolution=merge-duplicates,return=representation'},body:JSON.stringify(p)});
 
 /* ══ TOKENS ══ */
+/* Sistema Evolving — hueso cálido, tinta cálida, acento oliva (culinario, propio).
+   Se conservan los nombres de clave (blue*, etc.) para recolorear toda la app;
+   "blue" pasa a ser el verde oliva de acento. */
 const G = {
-  bg:"#FFFFFF", surf:"#F7F9FC", card:"#FFFFFF", cardH:"#F4F7FF",
-  brd:"#E2E8F0", brdL:"#C8D4E8",
-  blue:"#1B4FD8", blueHov:"#1440B8", blueTint:"#F0F4FF", blueLight:"#E8EEFF",
-  text:"#0A0F1A", textMid:"#4A5568", textMut:"#8898AA",
-  gold:"#B8860B", goldL:"#D4A020",
-  red:"#DC2626", green:"#16A34A", w:"#FFF",
+  bg:"#F3F1EC", surf:"#ECE8DF", card:"#FCFBF8", cardH:"#F4F1E9",
+  brd:"#E3DED2", brdL:"#D2CBBB",
+  blue:"#4F6146", blueHov:"#3E4E37", blueTint:"#ECEFE6", blueLight:"#E1E7D8",
+  text:"#17150F", textMid:"#3A3730", textMut:"#8C8678",
+  gold:"#A9762C", goldL:"#C08F3D",
+  red:"#B0473B", green:"#54694A", w:"#FCFBF8",
 };
 const FH = `"Space Grotesk",sans-serif`;
 const FB = `"Inter",system-ui,sans-serif`;
+const FM = `"IBM Plex Mono",ui-monospace,monospace`;
 const inp = (x={}) => ({
   background:G.w, border:`1px solid ${G.brd}`, color:G.text,
   padding:"9px 13px", borderRadius:6, fontFamily:FB, fontSize:13,
@@ -93,6 +97,54 @@ const bv = (v="p",x={}) => ({
   padding:"9px 18px", borderRadius:6, letterSpacing:.1,
   transition:"all .18s", whiteSpace:"nowrap", ...x
 });
+
+/* ══ ICONOS — set line propio (Evolving). Reemplaza emojis. currentColor + trazo fino. ══ */
+const ICON_PATHS={
+  plate:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.4"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h3.6a2 2 0 0 1 1.4.6L11.4 7H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  flask:'<path d="M9 3h6"/><path d="M10 3v6.2L5.3 17a2 2 0 0 0 1.7 3h10a2 2 0 0 0 1.7-3L14 9.2V3"/><path d="M7.7 15h8.6"/>',
+  wheel:'<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17M6 6l12 12M18 6 6 18"/>',
+  bulb:'<path d="M9.5 18h5"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 1 3.8 10.6c-.5.5-.8 1.1-.8 1.8v.6H9v-.6c0-.7-.3-1.3-.8-1.8A6 6 0 0 1 12 3z"/>',
+  drop:'<path d="M12 3.5c3.6 5.2 5.5 8 5.5 11a5.5 5.5 0 0 1-11 0c0-3 1.9-5.8 5.5-11z"/>',
+  cart:'<path d="M3.5 4.5h2L8 15.5h9.2L19.5 8H6.6"/><circle cx="9.2" cy="19.5" r="1.3"/><circle cx="16.8" cy="19.5" r="1.3"/>',
+  upload:'<path d="M12 15.5V4.5M8 8l4-4 4 4"/><path d="M5 16v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V16"/>',
+  download:'<path d="M12 4v11M8 11l4 4 4-4"/><path d="M5 16v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V16"/>',
+  tray:'<path d="M4 14.5v3.5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3.5M4 14.5h4l1.5 2h5l1.5-2H20M4 14.5 6 5.5h12l2 9"/>',
+  pencil:'<path d="M4 20h4L18.6 9.4a2 2 0 0 0-2.8-2.8L5 17.2z"/><path d="M14 8l2.8 2.8"/>',
+  trash:'<path d="M4 7h16"/><path d="M9 7V5.2a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"/><path d="M6.3 7l1 12a1 1 0 0 0 1 1h7.4a1 1 0 0 0 1-1l1-12"/><path d="M10.5 11v5M13.5 11v5"/>',
+  camera:'<path d="M4 8.5a1.5 1.5 0 0 1 1.5-1.5H7l1.4-2h7.2L17 7h1.5A1.5 1.5 0 0 1 20 8.5V17a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17z"/><circle cx="12" cy="12.5" r="3.2"/>',
+  link:'<path d="M9.2 14.8l5.6-5.6"/><path d="M10.5 6.5l1-1a3.6 3.6 0 0 1 5 5l-1 1"/><path d="M13.5 17.5l-1 1a3.6 3.6 0 0 1-5-5l1-1"/>',
+  check:'<circle cx="12" cy="12" r="8.5"/><path d="M8.3 12.4l2.6 2.6 4.8-5.4"/>',
+  alert:'<path d="M12 4.5l8.5 15H3.5z"/><path d="M12 10v4.2"/><path d="M12 17.2h.01"/>',
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.2l3.4 2"/>',
+  chart:'<path d="M4 19.5h16"/><path d="M7.5 19.5V13M12 19.5V7.5M16.5 19.5v-4.5"/>',
+  doc:'<path d="M6.5 3.5h6.5l4.5 4.5v11.5a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z"/><path d="M13 3.5V8h4.5"/><path d="M8.5 12.5h7M8.5 16h7"/>',
+  box:'<path d="M3.5 8l8.5-4 8.5 4v8l-8.5 4-8.5-4z"/><path d="M3.5 8l8.5 4 8.5-4M12 12v8"/>',
+  sprout:'<path d="M12 20.5V12.5"/><path d="M12 12.5C12 9.5 9.8 7.5 6 7.5c0 4 3 5 6 5z"/><path d="M12 13.5c0-3 2.2-5 6-5 0 4-3 5-6 5z"/>',
+  star:'<path d="M12 3.6l2.5 5.3 5.7.8-4.2 4 1 5.7L12 16.7 6.9 19.4l1-5.7-4.2-4 5.7-.8z"/>',
+  target:'<circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="4.4"/><circle cx="12" cy="12" r="1"/>',
+  user:'<circle cx="12" cy="8.2" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>',
+  sparkle:'<path d="M12 3.5l1.7 5L19 10l-5.3 1.5L12 16.5l-1.7-5L5 10l5.3-1.5z"/>',
+  cloud:'<path d="M7.2 18.5a4.2 4.2 0 0 1-.5-8.4 5.2 5.2 0 0 1 10-1.4A3.7 3.7 0 0 1 17 18.5z"/>',
+  search:'<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.2-4.2"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  fork:'<path d="M8 3v6a2 2 0 0 0 2 2 M12 3v6a2 2 0 0 1-2 2 M10 11v10 M16 3c-1.5 0-2.5 2-2.5 5S14.5 13 16 13v8"/>',
+  spoon:'<path d="M12 12v9"/><ellipse cx="12" cy="7" rx="3.2" ry="4.2"/>',
+  glass:'<path d="M7 4h10l-1 8a4 4 0 0 1-8 0z M12 16v4 M8.5 20h7"/>',
+  hands:'<path d="M6 11l2-3 M18 11l-2-3 M4 12a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3c0 4-3.6 7-8 7s-8-3-8-7z"/>',
+  chopsticks:'<path d="M4 20L18 5 M4 16L14 4"/>',
+  book:'<path d="M5 4.5h9a2 2 0 0 1 2 2V20a1.5 1.5 0 0 0-1.5-1.5H5z"/><path d="M16 6.5h3v13.5H6.5"/>',
+  eye:'<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  arrowUpRight:'<path d="M7 17L17 7M8.5 7H17v8.5"/>',
+  cutlery:'<path d="M8.2 3v5.4M10.8 3v5.4M9.5 8.6V21M8.2 8.4a1.3 1.3 0 0 1-1.3-1.3M10.8 8.4a1.3 1.3 0 0 0 1.3-1.3"/><path d="M15.4 3c-1.2 0-2 1.9-2 4.2s.8 3.3 2 3.3V21"/>',
+  moon:'<path d="M20 14.3A8 8 0 1 1 9.7 4 6.3 6.3 0 0 0 20 14.3z"/>',
+  infinity:'<path d="M7 9.5a2.8 2.8 0 1 0 0 5c1.7 0 2.8-1.5 5-2.5s3.3-2.5 5-2.5a2.8 2.8 0 1 1 0 5c-1.7 0-2.8-1.5-5-2.5S8.7 9.5 7 9.5z"/>',
+};
+function Icon({name,size=16,stroke=1.6,style,className}){
+  const p=ICON_PATHS[name];
+  if(!p)return null;
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" className={className} style={{flexShrink:0,display:"inline-block",verticalAlign:"middle",...style}} aria-hidden="true" dangerouslySetInnerHTML={{__html:p}}/>;
+}
 
 /* ══ STATIC DATA ══ */
 const COUNTRIES=[
@@ -114,14 +166,14 @@ const CATEGORIES=["Entradas","Sopas & Caldos","Pastas & Arroces","Carnes",
   "Pescados & Mariscos","Aves","Vegetariano & Vegano","Postres",
   "Panadería & Repostería","Bebidas & Cócteles","Salsas & Bases","Snacks & Bocadillos"];
 const CUTLERY=[
-  {id:"fork_knife",label:"Tenedor + Cuchillo",icon:"🍽️"},
-  {id:"fork",label:"Tenedor",icon:"🍴"},
-  {id:"spoon",label:"Cuchara",icon:"🥄"},
-  {id:"chopsticks",label:"Palillos",icon:"🥢"},
-  {id:"hands",label:"Manos",icon:"🤲"},
-  {id:"glass",label:"Copa",icon:"🥂"},
+  {id:"fork_knife",label:"Tenedor + Cuchillo",icon:"cutlery"},
+  {id:"fork",label:"Tenedor",icon:"fork"},
+  {id:"spoon",label:"Cuchara",icon:"spoon"},
+  {id:"chopsticks",label:"Palillos",icon:"chopsticks"},
+  {id:"hands",label:"Manos",icon:"hands"},
+  {id:"glass",label:"Copa",icon:"glass"},
 ];
-const COLL_COLORS=["#1B4FD8","#0891B2","#7C3AED","#059669","#DC2626","#D97706","#0D9488"];
+const COLL_COLORS=["#4F6146","#B0684A","#A9762C","#7E5E70","#9C5B4E","#5C7A6A","#6E6653"];
 
 /* ══ WHEEL DATA ══ */
 const SECTORS=[
@@ -317,7 +369,7 @@ class ErrorBoundary extends React.Component {
       const stack = this.state.info?.componentStack||"";
       return(
         <div style={{padding:32,fontFamily:"monospace",background:"#fff",minHeight:"100vh"}}>
-          <h2 style={{color:"#DC2626",marginBottom:16}}>⚠️ Error detectado</h2>
+          <h2 style={{color:"#B0473B",marginBottom:16,fontFamily:'"Space Grotesk",sans-serif'}}>Error detectado</h2>
           <p style={{background:"#FEE2E2",padding:16,borderRadius:8,marginBottom:16,fontSize:13}}>{msg}</p>
           <details style={{fontSize:11,color:"#666"}}>
             <summary style={{cursor:"pointer",marginBottom:8}}>Stack trace</summary>
@@ -328,11 +380,11 @@ class ErrorBoundary extends React.Component {
               localStorage.removeItem("mep_recipes");
               window.location.reload();
             }
-          }} style={{marginTop:16,padding:"10px 20px",background:"#DC2626",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:14}}>
-            🗑️ Limpiar datos y reiniciar
+          }} style={{marginTop:16,padding:"10px 20px",background:"#B0473B",color:"#FCFBF8",border:"none",borderRadius:8,cursor:"pointer",fontSize:14,fontFamily:'"Space Grotesk",sans-serif',fontWeight:600}}>
+            Limpiar datos y reiniciar
           </button>
-          <button onClick={()=>window.location.reload()} style={{marginTop:16,marginLeft:8,padding:"10px 20px",background:"#1B4FD8",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:14}}>
-            🔄 Reintentar
+          <button onClick={()=>window.location.reload()} style={{marginTop:16,marginLeft:8,padding:"10px 20px",background:"#4F6146",color:"#FCFBF8",border:"none",borderRadius:8,cursor:"pointer",fontSize:14,fontFamily:'"Space Grotesk",sans-serif',fontWeight:600}}>
+            Reintentar
           </button>
         </div>
       );
@@ -408,7 +460,7 @@ function UploadToast({state,onDismiss}){
   const finished=status!=="processing";
   const shown=finished?ok:done;
   const pct=total?Math.round((done/total)*100):0;
-  const tone=status==="error"?"#D97706":status==="done"?"#16A34A":"#1B4FD8";
+  const tone=status==="error"?"#B0473B":status==="done"?"#4F6146":"#4F6146";
   const title=status==="error"?"Procesado con errores":status==="done"?"Recetas procesadas":"Procesando recetas";
   const meta=status==="error"?(failed+" con error"):status==="done"?"Completado":(pct+"%");
   return(
@@ -557,7 +609,7 @@ function App(){
 
 function TopBar({nav,setNav,view,onBack,recName,onAdd,syncing,synced,onRefresh}){
   const mob=useMobile();
-  const NAV=[["recipes","Recetas","🍽"],["organize","Colecciones","📁"],["lab","Laboratorio","🧪"]];
+  const NAV=[["recipes","Recetas","plate"],["organize","Colecciones","folder"],["lab","Laboratorio","flask"]];
   return(
     <header style={{background:G.w,borderBottom:`1px solid ${G.brd}`,padding:mob?"0 16px":"0 32px",height:mob?52:56,display:"flex",alignItems:"center",gap:mob?8:16,position:"sticky",top:0,zIndex:50}}>
       {nav==="recipes"&&view!=="gallery"
@@ -566,12 +618,12 @@ function TopBar({nav,setNav,view,onBack,recName,onAdd,syncing,synced,onRefresh})
       {!mob&&recName&&<><span style={{color:G.brd,fontSize:14}}>·</span><span style={{fontFamily:FB,fontSize:12,color:G.textMut,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:180}}>{recName}</span></>}
       <nav style={{display:"flex",gap:0,marginLeft:"auto",alignItems:"center"}}>
         {NAV.map(([id,label,icon])=>(
-          <button key={id} onClick={()=>setNav(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:mob?10:12,color:nav===id?G.blue:G.textMut,fontWeight:nav===id?700:400,padding:mob?"0 10px":"0 14px",height:mob?52:56,borderBottom:nav===id?`2px solid ${G.blue}`:"2px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,transition:"color .15s"}}>
-            {mob&&<span style={{fontSize:16}}>{icon}</span>}
+          <button key={id} onClick={()=>setNav(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FM,fontSize:mob?9:11,letterSpacing:.4,color:nav===id?G.blue:G.textMut,fontWeight:nav===id?600:400,padding:mob?"0 10px":"0 14px",height:mob?52:56,borderBottom:nav===id?`2px solid ${G.blue}`:"2px solid transparent",display:"flex",flexDirection:mob?"column":"row",alignItems:"center",justifyContent:"center",gap:mob?2:7,transition:"color .15s"}}>
+            <Icon name={icon} size={mob?18:15} stroke={1.5}/>
             {label}
           </button>
         ))}
-        <button onClick={()=>onRefresh&&onRefresh()} disabled={syncing} title={syncing?"Sincronizando…":synced?"Sincronizado — actualizar":"Actualizar desde la nube"} style={{background:"none",border:"none",cursor:syncing?"wait":"pointer",color:syncing?"#F59E0B":synced?"#059669":G.textMut,fontSize:18,padding:"0 8px",display:"flex",alignItems:"center",lineHeight:1}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=syncing?"#F59E0B":synced?"#059669":G.textMut}>↻</button>
+        <button onClick={()=>onRefresh&&onRefresh()} disabled={syncing} title={syncing?"Sincronizando…":synced?"Sincronizado — actualizar":"Actualizar desde la nube"} style={{background:"none",border:"none",cursor:syncing?"wait":"pointer",color:syncing?G.gold:synced?G.green:G.textMut,fontSize:18,padding:"0 8px",display:"flex",alignItems:"center",lineHeight:1,transition:"color .15s"}} onMouseOver={e=>e.currentTarget.style.color=G.blue} onMouseOut={e=>e.currentTarget.style.color=syncing?G.gold:synced?G.green:G.textMut}>↻</button>
         {!mob&&nav==="recipes"&&view==="gallery"&&<button onClick={onAdd} style={{...bv("p",{padding:"7px 16px",fontSize:11,fontWeight:700,marginLeft:4})}} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>+ Nueva Receta</button>}
       </nav>
     </header>
@@ -591,20 +643,20 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
     <div style={{maxWidth:1200,margin:"0 auto",padding:mob?"16px 12px":"48px 32px",paddingBottom:sel.size>0?"100px":undefined}}>
       {showImport&&<ImportModal onClose={()=>setShowImport(false)} onImport={r=>{onImport&&onImport(r);setShowImport(false);}} colls={colls}/>}
       <div style={{marginBottom:36}}>
-        <p style={{fontFamily:FB,fontSize:11,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Archivo de Recetas</p>
+        <p style={{fontFamily:FM,fontSize:10.5,letterSpacing:2.5,textTransform:"uppercase",color:G.blue,fontWeight:500,marginBottom:10}}>Archivo de Recetas</p>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:12}}>
-          <h1 style={{fontFamily:FH,fontSize:38,color:G.text,fontWeight:700,letterSpacing:-.5}}>{total} receta{total!==1?"s":""} archivadas</h1>
+          <h1 style={{fontFamily:FH,fontSize:38,color:G.text,fontWeight:700,letterSpacing:-.02+"em"}}>{total} receta{total!==1?"s":""} archivadas</h1>
           <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
             {/* Seleccionar (multi-select para lista combinada) */}
             <button onClick={()=>{setSelecting(p=>!p);setSel(new Set());}}
               style={{...bv(selecting?"p":"ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5})}}
               onMouseOver={e=>{if(!selecting)e.currentTarget.style.background=G.surf;}}
               onMouseOut={e=>{if(!selecting)e.currentTarget.style.background=G.w;}}>
-              {selecting?"✕ Cancelar selección":"☑ Seleccionar"}
+              <Icon name={selecting?"plus":"check"} size={14} style={selecting?{transform:"rotate(45deg)"}:null}/>{selecting?"Cancelar selección":"Seleccionar"}
             </button>
             {/* Carga Masiva: subir varios .json de golpe */}
             <label style={{...bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w} title="Sube varios archivos .json de recetas de golpe">
-              ⬆ Subir recetas
+              <Icon name="upload" size={14}/>Subir recetas
               <input type="file" multiple accept=".json,application/json" style={{display:"none"}} onChange={e=>{if(onBulkUpload&&e.target.files.length)onBulkUpload(e.target.files);e.target.value="";}}/>
             </label>
             {/* Export ALL */}
@@ -615,11 +667,11 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
               a.href=url;a.download="mise-en-place-backup-"+new Date().toISOString().slice(0,10)+".json";
               a.click();URL.revokeObjectURL(url);
             }} style={bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5})} title="Exportar todas las recetas como JSON" onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
-              ⬆ Exportar todo
+              <Icon name="download" size={14}/>Exportar todo
             </button>
             {/* Import ALL */}
             <label style={{...bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5,cursor:"pointer"}),border:`1px solid ${G.brd}`}} title="Importar backup JSON completo" onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
-              ⬇ Importar todo
+              <Icon name="tray" size={14}/>Importar todo
               <input type="file" accept=".json" style={{display:"none"}} onChange={e=>{
                 const file=e.target.files[0]; if(!file)return;
                 const reader=new FileReader();
@@ -644,13 +696,13 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
                 e.target.value="";
               }}/>
             </label>
-            <button onClick={()=>setShowImport(true)} style={bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>📥 Importar receta</button>
+            <button onClick={()=>setShowImport(true)} style={bv("ghost",{padding:"8px 14px",fontSize:12,borderRadius:6,display:"flex",alignItems:"center",gap:5})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}><Icon name="tray" size={14}/>Importar receta</button>
           </div>
           {/* Cloud sync status */}
           <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8}}>
-            <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:"#F0FDF4",border:"1px solid #6EE7B7"}}>
-              <span style={{fontSize:13}}>✅</span>
-              <span style={{fontFamily:FB,fontSize:11,fontWeight:600,color:"#065F46"}}>{total} receta{total!==1?"s":""} archivadas</span>
+            <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:G.blueTint,border:`1px solid ${G.blueLight}`,color:G.blue}}>
+              <Icon name="check" size={13}/>
+              <span style={{fontFamily:FM,fontSize:10.5,fontWeight:500,letterSpacing:.3}}>{total} receta{total!==1?"s":""} sincronizadas</span>
             </div>
           </div>
         </div>
@@ -704,7 +756,7 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
               style={{...bv("p",{padding:mob?"9px 14px":"10px 20px",fontSize:12,fontWeight:700,borderRadius:8,display:"flex",alignItems:"center",gap:6})}}
               onMouseOver={e=>e.currentTarget.style.background=G.blueHov}
               onMouseOut={e=>e.currentTarget.style.background=G.blue}>
-              🛒 Lista combinada
+              <Icon name="cart" size={15}/>Lista combinada
             </button>
             <button onClick={exitSel}
               style={{...bv("ghost",{padding:mob?"9px 12px":"10px 16px",fontSize:12,borderRadius:8})}}
@@ -722,7 +774,7 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
 function RecipeCard({recipe,onOpen,colls,onEdit,onExport,onDelete}){
   const[hov,setHov]=useState(false);
   const[menu,setMenu]=useState(false);
-  const cuts=CUTLERY.filter(c=>recipe.cutlery?.includes(c.id)).map(c=>c.icon).join(" ");
+  const cuts=CUTLERY.filter(c=>recipe.cutlery?.includes(c.id));
   const rc=recipe.colls?.map(cid=>colls?.find(c=>c.id===cid)).filter(Boolean)||[];
   return(
     <div onMouseOver={()=>setHov(true)} onMouseOut={()=>{setHov(false);setMenu(false);}}
@@ -732,13 +784,13 @@ function RecipeCard({recipe,onOpen,colls,onEdit,onExport,onDelete}){
         style={{position:"absolute",top:10,right:10,zIndex:20,background:"rgba(0,0,0,.5)",backdropFilter:"blur(4px)",border:"none",borderRadius:20,color:"#fff",width:30,height:30,cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,letterSpacing:1,opacity:hov||menu?1:0,transition:"opacity .2s"}}>···</button>
       {menu&&(
         <div onClick={e=>e.stopPropagation()} style={{position:"absolute",top:46,right:10,zIndex:100,background:G.w,border:`1px solid ${G.brd}`,borderRadius:10,boxShadow:"0 12px 32px rgba(0,0,0,.14)",minWidth:165,overflow:"hidden"}}>
-          <button onClick={()=>{onOpen&&onOpen();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>↗  Abrir detalle</button>
-          <button onClick={()=>{onEdit&&onEdit();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>✏️  Editar</button>
+          <button onClick={()=>{onOpen&&onOpen();setMenu(false);}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}><Icon name="eye" size={15} style={{color:G.textMut}}/>Abrir detalle</button>
+          <button onClick={()=>{onEdit&&onEdit();setMenu(false);}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}><Icon name="pencil" size={15} style={{color:G.textMut}}/>Editar</button>
           <div style={{borderTop:`1px solid ${G.brd}`}}/>
-          <button onClick={()=>{onExport&&onExport();setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.textMid,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>⬇  Exportar JSON</button>
-          <button onClick={()=>{shareShoppingList(recipe,recipe.portions);setMenu(false);}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}>🛒  Lista de compras</button>
+          <button onClick={()=>{onExport&&onExport();setMenu(false);}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.textMid,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}><Icon name="download" size={15} style={{color:G.textMut}}/>Exportar JSON</button>
+          <button onClick={()=>{shareShoppingList(recipe,recipe.portions);setMenu(false);}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.text,textAlign:"left"}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background="none"}><Icon name="cart" size={15} style={{color:G.textMut}}/>Lista de compras</button>
           <div style={{borderTop:`1px solid ${G.brd}`}}/>
-          <button onClick={()=>{if(window.confirm('¿Eliminar "'+recipe.name+'"?')){onDelete&&onDelete();setMenu(false);}}} style={{display:"block",width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.red,textAlign:"left",fontWeight:600}} onMouseOver={e=>e.currentTarget.style.background="#FEF2F2"} onMouseOut={e=>e.currentTarget.style.background="none"}>🗑  Eliminar receta</button>
+          <button onClick={()=>{if(window.confirm('¿Eliminar "'+recipe.name+'"?')){onDelete&&onDelete();setMenu(false);}}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 14px",border:"none",background:"none",cursor:"pointer",fontFamily:FB,fontSize:12,color:G.red,textAlign:"left",fontWeight:600}} onMouseOver={e=>e.currentTarget.style.background="#F6EAE7"} onMouseOut={e=>e.currentTarget.style.background="none"}><Icon name="trash" size={15}/>Eliminar receta</button>
         </div>
       )}
       {/* Square photo */}
@@ -765,7 +817,7 @@ function RecipeCard({recipe,onOpen,colls,onEdit,onExport,onDelete}){
           <span>{recipe.portions}p</span>
           <span style={{color:G.brd}}>·</span>
           <span>{recipe.steps?.length||0} pasos</span>
-          {cuts&&<><span style={{color:G.brd}}>·</span><span>{cuts}</span></>}
+          {cuts.length>0&&<><span style={{color:G.brd}}>·</span><span style={{display:"inline-flex",alignItems:"center",gap:4,color:G.textMid}}>{cuts.map(c=><Icon key={c.id} name={c.icon} size={13}/>)}</span></>}
         </div>
       </div>
     </div>
@@ -787,7 +839,7 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
           <p style={{fontFamily:FB,fontSize:10,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>{recipe.category}</p>
           <h1 style={{fontFamily:FH,fontSize:30,color:G.text,margin:"0 0 16px",fontWeight:700,letterSpacing:-.5,lineHeight:1.1}}>{recipe.name}</h1>
           <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-            {[`${recipe.portions} porciones`,`${recipe.steps.length} pasos`,...(cuts.length?[cuts.map(c=>c.icon+" "+c.label).join(", ")]:[])].map(l=>(
+            {[`${recipe.portions} porciones`,`${recipe.steps.length} pasos`,...(cuts.length?[cuts.map(c=>c.label).join(", ")]:[])].map(l=>(
               <span key={l} style={{background:G.surf,border:`1px solid ${G.brd}`,padding:"4px 12px",borderRadius:20,fontSize:10,color:G.textMid,fontFamily:FB}}>{l}</span>
             ))}
           </div>
@@ -811,7 +863,7 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
               style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:G.surf,borderRadius:6,textDecoration:"none",border:`1px solid ${G.brd}`,marginBottom:5,transition:"border-color .15s"}}
               onMouseOver={e=>e.currentTarget.style.borderColor=G.blue}
               onMouseOut={e=>e.currentTarget.style.borderColor=G.brd}>
-              <span>🔗</span>
+              <Icon name="link" size={15} style={{color:G.textMut}}/>
               <div style={{flex:1,minWidth:0}}>
                 <p style={{fontFamily:FB,fontSize:12,color:G.blue,margin:0,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lnk.label||lnk.url}</p>
                 {lnk.label&&<p style={{fontFamily:FB,fontSize:10,color:G.textMut,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lnk.url}</p>}
@@ -835,9 +887,9 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
           const a=document.createElement("a");a.href=url;
           a.download=recipe.name.replace(/\s+/g,"-").toLowerCase()+".json";
           a.click();URL.revokeObjectURL(url);
-        }} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:6,marginRight:6})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>⬇ JSON</button>
-        <button onClick={()=>shareShoppingList(recipe,recipe.portions)} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:6,marginRight:6})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>🛒 Lista de compras</button>
-        <button onClick={onEdit} style={{...bv("ghost",{fontSize:10,padding:"4px 12px",borderRadius:6,marginRight:6})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>✏️ Editar</button>
+        }} style={{...bv("ghost",{fontSize:10.5,padding:"5px 12px",borderRadius:6,marginRight:6,display:"inline-flex",alignItems:"center",gap:5})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}><Icon name="download" size={13}/>JSON</button>
+        <button onClick={()=>shareShoppingList(recipe,recipe.portions)} style={{...bv("ghost",{fontSize:10.5,padding:"5px 12px",borderRadius:6,marginRight:6,display:"inline-flex",alignItems:"center",gap:5})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}><Icon name="cart" size={13}/>Lista de compras</button>
+        <button onClick={onEdit} style={{...bv("ghost",{fontSize:10.5,padding:"5px 12px",borderRadius:6,marginRight:6,display:"inline-flex",alignItems:"center",gap:5})}} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}><Icon name="pencil" size={13}/>Editar</button>
         <button onClick={onDelete} style={{...bv("ghost",{fontSize:10,color:G.red,borderColor:G.red+"44",padding:"4px 12px",alignSelf:"center",borderRadius:6})}}
           onMouseOver={e=>e.currentTarget.style.background=G.red+"08"} onMouseOut={e=>e.currentTarget.style.background="transparent"}>
           Eliminar
@@ -954,14 +1006,14 @@ Si no hay cantidad específica usa 1. Unidades válidas: g, kg, ml, l, tsp, tbsp
                   </p>}
               {/* Notes / corrections */}
               <div style={{marginTop:12,borderTop:`1px solid ${G.brd}`,paddingTop:10}}>
-                <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:"#F59E0B",fontWeight:600,marginBottom:6,fontFamily:FB}}>✍ Notas y correcciones</p>
+                <p style={{fontSize:9,letterSpacing:2,textTransform:"uppercase",color:"#A9762C",fontWeight:600,marginBottom:6,fontFamily:FB}}>✍ Notas y correcciones</p>
                 {isEditing(step.id,"notes")
                   ?<textarea autoFocus value={draft} onChange={e=>setDraft(e.target.value)} rows={3}
                       onBlur={()=>saveEdit(step.id,"notes")}
                       onKeyDown={e=>{if(e.key==="Escape")setEditStep(null);}}
-                      style={{width:"100%",fontFamily:FB,fontSize:11,lineHeight:1.7,border:`1px solid #F59E0B`,borderRadius:6,padding:"6px 10px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+                      style={{width:"100%",fontFamily:FB,fontSize:11,lineHeight:1.7,border:`1px solid #A9762C`,borderRadius:6,padding:"6px 10px",outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
                   :<p onClick={()=>onUpdate&&startEdit(step.id,"notes",step.notes||"")}
-                      style={{margin:0,fontSize:11,color:step.notes?"#92400E":G.textMut,lineHeight:1.7,fontFamily:FB,fontStyle:step.notes?"normal":"italic",...(onUpdate?{cursor:"text"}:{})}}>
+                      style={{margin:0,fontSize:11,color:step.notes?"#6E5A3A":G.textMut,lineHeight:1.7,fontFamily:FB,fontStyle:step.notes?"normal":"italic",...(onUpdate?{cursor:"text"}:{})}}>
                       {step.notes||"Clic para agregar notas o correcciones…"}
                     </p>}
               </div>
@@ -1010,7 +1062,7 @@ function NutricionTab({recipe,onUpdate}){
   const MACROS=n?[
     {label:"Calorías",val:n.kcal,unit:"kcal",color:"#EF4444"},
     {label:"Proteína",val:n.protein,unit:"g",color:"#3B82F6",pct:n.kcal>0?Math.round(n.protein*4*100/n.kcal):0},
-    {label:"Carbs",val:n.carbs,unit:"g",color:"#F59E0B",pct:n.kcal>0?Math.round(n.carbs*4*100/n.kcal):0},
+    {label:"Carbs",val:n.carbs,unit:"g",color:"#A9762C",pct:n.kcal>0?Math.round(n.carbs*4*100/n.kcal):0},
     {label:"Grasa",val:n.fat,unit:"g",color:"#10B981",pct:n.kcal>0?Math.round(n.fat*9*100/n.kcal):0},
     {label:"Fibra",val:n.fiber,unit:"g",color:"#8B5CF6"},
   ]:[];
@@ -1018,7 +1070,7 @@ function NutricionTab({recipe,onUpdate}){
     <div style={{fontFamily:FB}}>
       {!nutrition&&!loading&&<div style={{textAlign:"center",padding:"48px 0"}}>
         <p style={{fontSize:14,color:G.textMut,marginBottom:20}}>Macros y calorías por porción usando USDA FoodData Central (600K+ alimentos)</p>
-        <button onClick={calculate} style={bv("p",{padding:"12px 28px",fontSize:13,borderRadius:8})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>🔬 Calcular nutrición</button>
+        <button onClick={calculate} style={bv("p",{padding:"12px 28px",fontSize:13,borderRadius:8,display:"inline-flex",alignItems:"center",gap:7})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}><Icon name="chart" size={15}/>Calcular nutrición</button>
       </div>}
       {loading&&<div style={{textAlign:"center",padding:"48px 0"}}>
         <p style={{fontSize:13,color:G.textMut}}>Consultando USDA FoodData Central…</p>
@@ -1045,7 +1097,7 @@ function NutricionTab({recipe,onUpdate}){
               <td style={{padding:"6px 8px",color:G.textMid,textAlign:"right"}}>{Math.round(r.grams)}</td>
               <td style={{padding:"6px 8px",color:"#EF4444",textAlign:"right",fontWeight:600}}>{r.kcal}</td>
               <td style={{padding:"6px 8px",color:"#3B82F6",textAlign:"right"}}>{r.protein}g</td>
-              <td style={{padding:"6px 8px",color:"#F59E0B",textAlign:"right"}}>{r.carbs}g</td>
+              <td style={{padding:"6px 8px",color:"#A9762C",textAlign:"right"}}>{r.carbs}g</td>
               <td style={{padding:"6px 8px",color:"#10B981",textAlign:"right"}}>{r.fat}g</td>
             </tr>)}</tbody>
           </table>
@@ -1296,9 +1348,9 @@ function ImportModal({onClose,onImport,colls}){
     setLoading(false);
   };
 
-  const TABS=[["file","📄 Archivo"],["batch","📦 Carga Masiva"],["url","🔗 URL / Video"],["text","📝 Texto"]];
+  const TABS=[["file","Archivo","doc"],["batch","Carga Masiva","box"],["url","URL / Video","link"],["text","Texto","pencil"]];
   const pct=batchFiles.length>0?Math.round(batchDone/batchFiles.length*100):0;
-  const statusIcon=s=>s==="ok"?"✅":s==="error"?"❌":s==="processing"?"⏳":"⬜";
+  const statusIcon=s=>s==="ok"?"✓":s==="error"?"✕":s==="processing"?"⋯":"○";
 
   return(
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}} onClick={onClose}>
@@ -1309,13 +1361,13 @@ function ImportModal({onClose,onImport,colls}){
             <h3 style={{fontFamily:FH,fontSize:20,color:G.text,margin:"0 0 2px",fontWeight:700}}>Importar Recetas</h3>
             <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>Individual o carga masiva — PDF · Word · Excel · Foto · URL · Texto</p>
           </div>
-          <button onClick={onClose} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:G.textMut}}>✕</button>
+          <button onClick={onClose} style={{background:"none",border:"none",fontSize:19,cursor:"pointer",color:G.textMut,lineHeight:1,padding:4}}>✕</button>
         </div>
         {/* Tabs */}
         <div style={{display:"flex",borderBottom:`1px solid ${G.brd}`,padding:"0 24px",overflowX:"auto"}}>
-          {TABS.map(([id,label])=>(
-            <button key={id} onClick={()=>{setTab(id);setError("");setPreview(null);}} style={{background:"none",border:"none",cursor:"pointer",padding:"10px 14px",fontFamily:FB,fontSize:12,fontWeight:600,color:tab===id?G.blue:G.textMut,borderBottom:tab===id?`2px solid ${G.blue}`:"2px solid transparent",marginBottom:-1,whiteSpace:"nowrap"}}>
-              {label}
+          {TABS.map(([id,label,ic])=>(
+            <button key={id} onClick={()=>{setTab(id);setError("");setPreview(null);}} style={{background:"none",border:"none",cursor:"pointer",padding:"10px 14px",fontFamily:FB,fontSize:12,fontWeight:600,color:tab===id?G.blue:G.textMut,borderBottom:tab===id?`2px solid ${G.blue}`:"2px solid transparent",marginBottom:-1,whiteSpace:"nowrap",display:"inline-flex",alignItems:"center",gap:6}}>
+              <Icon name={ic} size={14}/>{label}
             </button>
           ))}
         </div>
@@ -1333,7 +1385,7 @@ function ImportModal({onClose,onImport,colls}){
                 onDragLeave={e=>{e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.background=G.surf;}}
                 onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.background=G.surf;if(f&&!loading)importFile(f);}}
                 style={{border:`2px dashed ${G.brd}`,borderRadius:10,padding:"28px 20px",textAlign:"center",cursor:loading?"not-allowed":"pointer",background:G.surf,transition:"all .15s",opacity:loading?.6:1}}>
-                <p style={{fontFamily:FH,fontSize:22,margin:"0 0 6px"}}>{loading?"⏳":"📂"}</p>
+                <p style={{margin:"0 0 8px",color:G.blue,display:"flex",justifyContent:"center"}}><Icon name={loading?"clock":"tray"} size={30} stroke={1.4}/></p>
                 <p style={{fontFamily:FH,fontSize:14,color:G.text,margin:"0 0 4px",fontWeight:700}}>{loading?"Analizando con IA…":"Arrastra tu archivo aquí"}</p>
                 <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>o haz clic para seleccionar · PDF · Word · Excel · JSON · CSV · MD · foto</p>
               </div>
@@ -1354,7 +1406,7 @@ function ImportModal({onClose,onImport,colls}){
                   onDragLeave={e=>{e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.background=G.surf;}}
                   onDrop={e=>{e.preventDefault();addBatchFiles(e.dataTransfer.files);e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.background=G.surf;}}
                   style={{border:`2px dashed ${G.brd}`,borderRadius:10,padding:"28px",textAlign:"center",cursor:"pointer",background:G.surf,marginBottom:14,transition:"all .15s"}}>
-                  <p style={{fontFamily:FH,fontSize:22,margin:"0 0 6px"}}>📂</p>
+                  <p style={{margin:"0 0 8px",color:G.blue,display:"flex",justifyContent:"center"}}><Icon name="box" size={30} stroke={1.4}/></p>
                   <p style={{fontFamily:FH,fontSize:15,color:G.text,margin:"0 0 4px",fontWeight:700}}>Arrastra aquí tus archivos</p>
                   <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>o haz clic — PDF, Word, Excel, JSON, CSV, MD, foto</p>
                 </div>
@@ -1422,7 +1474,7 @@ function ImportModal({onClose,onImport,colls}){
               <p style={{fontFamily:FB,fontSize:12,color:G.textMid,marginBottom:12,lineHeight:1.6}}>Pega la URL de un video de <strong>TikTok</strong>, <strong>Instagram</strong>, <strong>YouTube</strong>, o cualquier web con la receta.</p>
               <div style={{display:"flex",gap:8,marginBottom:8}}>
                 <input value={urlVal} onChange={e=>setUrlVal(e.target.value)} onKeyDown={e=>e.key==="Enter"&&importURL()} placeholder="https://www.tiktok.com/@chef/video/..." style={inp({flex:1,fontSize:12})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
-                <button onClick={importURL} disabled={loading} style={bv("p",{padding:"9px 16px",borderRadius:6,opacity:loading?.6:1})} onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>{loading?"⏳":"Extraer"}</button>
+                <button onClick={importURL} disabled={loading} style={bv("p",{padding:"9px 16px",borderRadius:6,opacity:loading?.6:1})} onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>{loading?"…":"Extraer"}</button>
               </div>
             </div>
           )}
@@ -1431,7 +1483,7 @@ function ImportModal({onClose,onImport,colls}){
           {tab==="text"&&(
             <div>
               <div style={{background:G.blueTint,border:`1px solid ${G.blue}22`,borderRadius:8,padding:"10px 14px",marginBottom:12}}>
-                <p style={{fontFamily:FB,fontSize:11,color:G.blue,margin:0,lineHeight:1.5}}>💡 <strong>Carga múltiple por texto:</strong> pega varias recetas en el campo de abajo separadas por <code>---</code> y las importará todas de una sola vez.</p>
+                <p style={{fontFamily:FB,fontSize:11,color:G.blue,margin:0,lineHeight:1.5,display:"flex",alignItems:"flex-start",gap:7}}><Icon name="bulb" size={15} style={{marginTop:1,flexShrink:0}}/><span><strong>Carga múltiple por texto:</strong> pega varias recetas en el campo de abajo separadas por <code>---</code> y las importará todas de una sola vez.</span></p>
               </div>
               <textarea value={textVal} onChange={e=>setTextVal(e.target.value)} rows={9} placeholder={"Receta 1: Ceviche de corvina\nIngredientes: 500g corvina...\n\n---\n\nReceta 2: Lomo saltado\nIngredientes: 400g lomo..."} style={inp({resize:"vertical",fontSize:12,lineHeight:1.6,marginBottom:8,fontFamily:"monospace"})} onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
               <button onClick={importText} disabled={loading||!textVal.trim()} style={bv("p",{padding:"9px 20px",borderRadius:6,width:"100%",opacity:(loading||!textVal.trim())?.5:1})} onMouseOver={e=>{if(!loading&&textVal.trim())e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
@@ -1467,7 +1519,7 @@ function ImportModal({onClose,onImport,colls}){
           )}
           {preview?._multi&&(
             <div style={{marginTop:12,background:G.green+"0A",border:`1px solid ${G.green}33`,borderRadius:10,padding:"14px 16px",textAlign:"center"}}>
-              <p style={{fontFamily:FH,fontSize:18,color:G.green,margin:"0 0 4px",fontWeight:700}}>✅ {preview._count} recetas importadas</p>
+              <p style={{fontFamily:FH,fontSize:18,color:G.green,margin:"0 0 4px",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}><Icon name="check" size={18}/>{preview._count} recetas importadas</p>
               <p style={{fontFamily:FB,fontSize:12,color:G.textMid,margin:0}}>Todas guardadas en tu repositorio</p>
             </div>
           )}
@@ -1522,7 +1574,7 @@ function AddRecipe({onSave,onCancel,colls,initialRecipe}){
         <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
           {CUTLERY.map(c=>{const s=form.cutlery.includes(c.id);return(
             <button key={c.id} onClick={()=>toggleCut(c.id)} style={{background:s?G.blueTint:"transparent",color:s?G.blue:G.textMid,border:`1px solid ${s?G.blue:G.brd}`,padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:FB,fontSize:10,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
-              <span>{c.icon}</span>{c.label}
+              <Icon name={c.icon} size={14}/>{c.label}
             </button>);})}
         </div>
         <Label t="Emplatado"/>
@@ -1554,7 +1606,7 @@ function AddRecipe({onSave,onCancel,colls,initialRecipe}){
           ?<div style={{position:"relative",display:"inline-block"}}><img src={form.photo} alt="preview" style={{maxWidth:280,maxHeight:200,borderRadius:8,border:`1px solid ${G.brd}`,objectFit:"cover"}}/><button onClick={()=>upd("photo",null)} style={{...bv("ghost",{position:"absolute",top:8,right:8,padding:"3px 8px",fontSize:10,borderRadius:4})}}>✕</button></div>
           :<button onClick={()=>fileRef.current.click()} style={{width:"100%",padding:"32px",border:`2px dashed ${G.brd}`,borderRadius:8,background:G.surf,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,color:G.textMut,transition:"border-color .18s",fontFamily:FB,fontSize:12}}
             onMouseOver={e=>{e.currentTarget.style.borderColor=G.blue;e.currentTarget.style.color=G.blue;}} onMouseOut={e=>{e.currentTarget.style.borderColor=G.brd;e.currentTarget.style.color=G.textMut;}}>
-            <span style={{fontSize:24}}>📷</span>Subir foto de la receta<span style={{fontSize:10}}>JPG, PNG, WEBP</span>
+            <Icon name="camera" size={26} stroke={1.4}/>Subir foto de la receta<span style={{fontSize:10,fontFamily:FM,letterSpacing:.5}}>JPG · PNG · WEBP</span>
           </button>}
       </SectionBox>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
@@ -1870,8 +1922,8 @@ function VinagretaBuilder({onSaveRecipe}){
       <div style={{background:G.surf,border:`1px solid ${G.brd}`,borderRadius:10,padding:"14px 16px",marginBottom:12}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <div style={{width:10,height:10,borderRadius:"50%",background:color,flexShrink:0}}/>
-            <span style={{fontFamily:FB,fontSize:11,fontWeight:700,color:G.text,letterSpacing:.3,textTransform:"uppercase"}}>{icon} {label}</span>
+            <Icon name={icon} size={15} style={{color}}/>
+            <span style={{fontFamily:FM,fontSize:10.5,fontWeight:500,color:G.text,letterSpacing:1,textTransform:"uppercase"}}>{label}</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <TotalChip skey={skey} value={sTotal} color={color} label={label}/>
@@ -1909,7 +1961,7 @@ function VinagretaBuilder({onSaveRecipe}){
       {/* Ratio bar (live proportions) */}
       <div style={{marginBottom:20}}>
         <div style={{display:"flex",borderRadius:8,overflow:"hidden",height:32,marginBottom:8}}>
-          {[[oilTotal,"#84CC16","Aceite"],[acidTotal,"#F97316","Ácido"],[emulTotal,"#6366F1","Emulsificador"]].map(([val,color,lbl])=>{
+          {[[oilTotal,"#6E7F4E","Aceite"],[acidTotal,"#B0844A","Ácido"],[emulTotal,"#9C7A5B","Emulsificador"]].map(([val,color,lbl])=>{
             const pct=grandTotal>0?val/grandTotal*100:33.3;
             return pct>3?(
               <div key={lbl} style={{flex:pct,background:color,display:"flex",alignItems:"center",justifyContent:"center",transition:"flex .3s ease",overflow:"hidden",minWidth:40}}>
@@ -1920,7 +1972,7 @@ function VinagretaBuilder({onSaveRecipe}){
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{display:"flex",gap:16}}>
-            {[["#84CC16","Aceite/Grasa"],["#F97316","Ácido"],["#6366F1","Emulsificador"]].map(([c,l])=>(
+            {[["#6E7F4E","Aceite/Grasa"],["#B0844A","Ácido"],["#9C7A5B","Emulsificador"]].map(([c,l])=>(
               <span key={l} style={{display:"flex",alignItems:"center",gap:4,fontSize:10,color:G.textMut}}>
                 <div style={{width:8,height:8,borderRadius:2,background:c}}/>{l}
               </span>
@@ -1937,14 +1989,14 @@ function VinagretaBuilder({onSaveRecipe}){
       {/* Main grid */}
       <div style={{display:"grid",gridTemplateColumns:mob?"1fr":"1fr 1fr",gap:16,alignItems:"start"}}>
         <div>
-          <Section skey="oil" label="Aceite / Grasa" icon="🫙" color="#84CC16" items={oils} setter={setOils} options={OILS}/>
-          <Section skey="acid" label="Ácido" icon="🍋" color="#F97316" items={acids} setter={setAcids} options={ACIDS}/>
-          <Section skey="emul" label="Emulsificador" icon="🥚" color="#6366F1" items={emul} setter={setEmul} options={EMULSIFIERS} maxItems={2}/>
+          <Section skey="oil" label="Aceite / Grasa" icon="drop" color="#6E7F4E" items={oils} setter={setOils} options={OILS}/>
+          <Section skey="acid" label="Ácido" icon="drop" color="#B0844A" items={acids} setter={setAcids} options={ACIDS}/>
+          <Section skey="emul" label="Emulsificador" icon="drop" color="#9C7A5B" items={emul} setter={setEmul} options={EMULSIFIERS} maxItems={2}/>
         </div>
         <div>
           {/* Totals summary card */}
           <div style={{background:G.w,border:`1px solid ${G.brd}`,borderRadius:10,padding:"14px 16px",marginBottom:12}}>
-            <p style={{fontFamily:FB,fontSize:11,fontWeight:700,color:G.text,letterSpacing:.3,textTransform:"uppercase",margin:"0 0 12px"}}>📊 Resumen</p>
+            <p style={{fontFamily:FM,fontSize:10.5,fontWeight:500,color:G.text,letterSpacing:1,textTransform:"uppercase",margin:"0 0 12px",display:"flex",alignItems:"center",gap:7}}><Icon name="chart" size={14} style={{color:G.blue}}/>Resumen</p>
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead><tr style={{borderBottom:`1px solid ${G.brd}`}}>
                 <th style={{textAlign:"left",padding:"4px 6px",fontSize:9,color:G.textMut,fontWeight:700,letterSpacing:.8,textTransform:"uppercase"}}>Ingrediente</th>
@@ -1952,7 +2004,7 @@ function VinagretaBuilder({onSaveRecipe}){
                 <th style={{textAlign:"right",padding:"4px 6px",fontSize:9,color:G.textMut,fontWeight:700,letterSpacing:.8,textTransform:"uppercase"}}>%</th>
               </tr></thead>
               <tbody>
-                {[...oils.map(x=>({...x,color:"#84CC16"})),...acids.map(x=>({...x,color:"#F97316"})),...emul.map(x=>({...x,color:"#6366F1"}))].map(x=>(
+                {[...oils.map(x=>({...x,color:"#6E7F4E"})),...acids.map(x=>({...x,color:"#B0844A"})),...emul.map(x=>({...x,color:"#9C7A5B"}))].map(x=>(
                   <tr key={x.id} style={{borderBottom:`1px solid ${G.brd}`}}>
                     <td style={{padding:"5px 6px",color:G.text,display:"flex",alignItems:"center",gap:5}}>
                       <div style={{width:6,height:6,borderRadius:"50%",background:x.color,flexShrink:0}}/>
@@ -1973,7 +2025,7 @@ function VinagretaBuilder({onSaveRecipe}){
 
           {/* Seasonings */}
           <div style={{background:G.surf,border:`1px solid ${G.brd}`,borderRadius:10,padding:"14px 16px",marginBottom:12}}>
-            <p style={{fontFamily:FB,fontSize:11,fontWeight:700,color:G.text,letterSpacing:.3,textTransform:"uppercase",margin:"0 0 10px"}}>🌿 Sazón (opcional)</p>
+            <p style={{fontFamily:FM,fontSize:10.5,fontWeight:500,color:G.text,letterSpacing:1,textTransform:"uppercase",margin:"0 0 10px",display:"flex",alignItems:"center",gap:7}}><Icon name="sprout" size={14} style={{color:G.blue}}/>Sazón (opcional)</p>
             <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:8}}>
               {SEASONINGS.map(s=>{
                 const active=seasonings.includes(s);
@@ -2005,7 +2057,7 @@ function VinagretaBuilder({onSaveRecipe}){
           </div>
 
           <button onClick={saveAsRecipe} style={{...bv("p",{padding:"11px 24px",fontSize:13,borderRadius:8,width:"100%"}),display:"flex",alignItems:"center",justifyContent:"center",gap:8}} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
-            {saving?"✅ Guardada en recetas":"💾 Guardar como receta"}
+            <Icon name={saving?"check":"cloud"} size={15}/>{saving?"Guardada en recetas":"Guardar como receta"}
           </button>
         </div>
       </div>
@@ -2038,7 +2090,7 @@ function PairingsLab({recipes}){
     if(!season||season.length===0)return"year_round";
     return season.includes(MONTH)?"in_season":"out_season";
   };
-  const SM={in_season:{icon:"🌱",color:"#059669",bg:"#D1FAE5"},year_round:{icon:"♾️",color:"#6366F1",bg:"#E0E7FF"},out_season:{icon:"🌙",color:"#9CA3AF",bg:"#F3F4F6"}};
+  const SM={in_season:{icon:"sprout",color:"#5C7A4E",bg:"#E7ECDF"},year_round:{icon:"infinity",color:"#8C7B63",bg:"#EDE8DE"},out_season:{icon:"moon",color:"#9C8F80",bg:"#EEEAE1"}};
 
   const usageCount=React.useMemo(()=>{
     const counts={};
@@ -2125,7 +2177,7 @@ function PairingsLab({recipes}){
           transition:"all .2s",whiteSpace:"nowrap",flexShrink:0}}
         onMouseOver={e=>{if(!isSelected){e.currentTarget.style.borderColor=meta.color;e.currentTarget.style.background=meta.bg;}}}
         onMouseOut={e=>{if(!isSelected){e.currentTarget.style.borderColor=meta.color+"44";e.currentTarget.style.background=meta.bg;}}}>
-        <span style={{fontSize:isSplit?10:11}}>{meta.icon}</span>
+        <Icon name={meta.icon} size={isSplit?11:12} style={{color:meta.color}}/>
         <span>{ing.name}</span>
         {usage>0&&<span style={{fontSize:9,opacity:.8}}>{"★".repeat(Math.min(usage,3))}</span>}
       </button>
@@ -2139,12 +2191,12 @@ function PairingsLab({recipes}){
         <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} placeholder="Buscar…"
           style={{...inp({fontSize:11,padding:"5px 10px",borderRadius:20,width:120,boxSizing:"border-box"})}}
           onFocus={e=>e.target.style.borderColor=G.blue} onBlur={e=>e.target.style.borderColor=G.brd}/>
-        {[["all","Todos"],["in_season","🌱"],["year_round","♾️"],["out_season","🌙"]].map(([k,l])=>(
-          <button key={k} onClick={()=>setFilter(k)}
+        {[["all","Todos",null],["in_season",null,"sprout"],["year_round",null,"infinity"],["out_season",null,"moon"]].map(([k,l,ic])=>(
+          <button key={k} onClick={()=>setFilter(k)} title={k==="in_season"?"En temporada":k==="year_round"?"Todo el año":k==="out_season"?"Fuera de temporada":"Todos"}
             style={{fontSize:10,padding:"4px 10px",borderRadius:20,border:`1px solid ${filter===k?G.blue:G.brd}`,
-              background:filter===k?G.blue:"transparent",color:filter===k?"#fff":G.textMut,
-              cursor:"pointer",fontFamily:FB,fontWeight:filter===k?700:400}}>
-            {l}
+              background:filter===k?G.blue:"transparent",color:filter===k?G.w:G.textMut,
+              cursor:"pointer",fontFamily:FB,fontWeight:filter===k?700:400,display:"inline-flex",alignItems:"center"}}>
+            {ic?<Icon name={ic} size={13}/>:l}
           </button>
         ))}
         {selected&&<button onClick={()=>{setSelected(null);setPairings([]);}}
@@ -2172,11 +2224,9 @@ function PairingsLab({recipes}){
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:SM[getSeasonStatus((INGS.find(i=>i.name===selected)?.season)||[])].icon,fontSize:18}}>
-                {SM[getSeasonStatus((INGS.find(i=>i.name===selected)?.season)||[])].icon}
-              </span>
+              <Icon name={SM[getSeasonStatus((INGS.find(i=>i.name===selected)?.season)||[])].icon} size={18} style={{color:SM[getSeasonStatus((INGS.find(i=>i.name===selected)?.season)||[])].color}}/>
               <h3 style={{fontFamily:FH,fontSize:18,color:G.text,margin:0}}>{selected}</h3>
-              {getUsage(selected)>0&&<span style={{fontSize:10,background:"#FEF3C7",color:"#92400E",padding:"2px 8px",borderRadius:20,fontWeight:700}}>⭐ En tus recetas</span>}
+              {getUsage(selected)>0&&<span style={{fontSize:10,background:G.blueTint,color:G.blue,padding:"3px 9px",borderRadius:20,fontWeight:600,fontFamily:FM,letterSpacing:.3,display:"inline-flex",alignItems:"center",gap:5}}><Icon name="star" size={11}/>En tus recetas</span>}
             </div>
             <p style={{fontSize:10,color:G.textMut,margin:"3px 0 0"}}>{pairings.length} pairings · {genLoading?"generando…":"listo"}</p>
           </div>
@@ -2206,7 +2256,7 @@ function PairingsLab({recipes}){
             const pSt=getSeasonStatus(pIng?.season||[]);
             const pMeta=SM[pSt];
             const sc=+p.score;
-            const scColor=sc>=8?"#059669":sc>=6?"#D97706":"#6B7280";
+            const scColor=sc>=8?"#54694A":sc>=6?"#A9762C":"#8C7B63";
             return(
               <div key={p.id} style={{background:G.w,border:`1px solid ${G.brd}`,borderRadius:8,padding:"10px 12px",transition:"box-shadow .15s",cursor:"default"}}
                 onMouseOver={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,.08)"}
@@ -2215,11 +2265,11 @@ function PairingsLab({recipes}){
                   <div style={{display:"flex",alignItems:"center",gap:5}}>
                     <span>{pMeta.icon}</span>
                     <span style={{fontFamily:FH,fontSize:13,color:G.text,fontWeight:700}}>{p.pairs_with}</span>
-                    <span style={{fontSize:9,color:p.source==="user"?"#7C3AED":"#1B4FD8",background:p.source==="user"?"#EDE9FE":"#EFF6FF",padding:"1px 6px",borderRadius:20}}>{p.source==="user"?"👤":"✦"}</span>
+                    <span style={{display:"inline-flex",alignItems:"center",color:p.source==="user"?"#8C7B63":G.blue,background:p.source==="user"?"#ECE8DF":G.blueTint,padding:"2px 6px",borderRadius:20}}><Icon name={p.source==="user"?"user":"sparkle"} size={11}/></span>
                   </div>
                   <span style={{fontSize:17,fontWeight:800,color:scColor,minWidth:20,textAlign:"center"}}>{sc}</span>
                 </div>
-                {p.compounds?.length>0&&<p style={{fontSize:9,color:"#6366F1",margin:"0 0 3px",lineHeight:1.4}}>🧪 {p.compounds.join(" · ")}</p>}
+                {p.compounds?.length>0&&<p style={{fontSize:9,color:G.textMut,margin:"0 0 3px",lineHeight:1.4,display:"flex",alignItems:"center",gap:5}}><Icon name="flask" size={11}/>{p.compounds.join(" · ")}</p>}
                 {p.notes&&<p style={{fontSize:11,color:G.textMid,margin:0,lineHeight:1.4}}>{p.notes}</p>}
               </div>
             );
@@ -2395,14 +2445,14 @@ function FlavorLab({recipes, onAddRecipe, onOpenRecipes}){
       <div style={{marginBottom:28}}>
         <p style={{fontFamily:FB,fontSize:10,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Laboratorio de Sabores</p>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:14}}>
-          <h1 style={{fontFamily:FH,fontSize:34,color:G.text,margin:0,fontWeight:700,letterSpacing:-.5}}>
-            {labTab==="wheel"?"Rueda Aromática":"Desde la Necesidad"}
+          <h1 style={{fontFamily:FH,fontSize:34,color:G.text,margin:0,fontWeight:700,letterSpacing:"-.02em"}}>
+            {labTab==="wheel"?"Rueda Aromática":labTab==="need"?"Desde la Necesidad":labTab==="pairings"?"Pairings":"Vinagretas"}
           </h1>
           {/* Main tabs */}
           <div style={{display:"flex",gap:0,background:G.surf,borderRadius:8,padding:3}}>
-            {[["wheel","🎯 Rueda Aromática"],["need","💡 Desde la Necesidad"],["pairings","🔬 Pairings"],["vinagreta","🥗 Vinagretas"]].map(([id,label])=>(
-              <button key={id} onClick={()=>setLabTab(id)} style={{padding:"8px 16px",border:"none",borderRadius:6,background:labTab===id?G.w:"transparent",color:labTab===id?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:labTab===id?700:400,boxShadow:labTab===id?"0 1px 4px rgba(0,0,0,.08)":"none",transition:"all .15s"}}>
-                {label}
+            {[["wheel","Rueda Aromática","wheel"],["need","Desde la Necesidad","bulb"],["pairings","Pairings","link"],["vinagreta","Vinagretas","drop"]].map(([id,label,ic])=>(
+              <button key={id} onClick={()=>setLabTab(id)} style={{padding:"8px 16px",border:"none",borderRadius:6,background:labTab===id?G.w:"transparent",color:labTab===id?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:labTab===id?700:500,boxShadow:labTab===id?"0 1px 4px rgba(23,21,15,.08)":"none",transition:"all .15s",display:"inline-flex",alignItems:"center",gap:7}}>
+                <Icon name={ic} size={15} stroke={1.5}/>{label}
               </button>
             ))}
           </div>
@@ -2782,7 +2832,7 @@ function NecesidadLab({onAddRecipe,onOpenRecipes}){
       {/* Empty state */}
       {!results&&!loading&&(
         <div style={{textAlign:"center",padding:"48px 0",color:G.textMut}}>
-          <p style={{fontSize:36,margin:"0 0 12px"}}>💡</p>
+          <p style={{margin:"0 0 14px",color:G.blue,display:"flex",justifyContent:"center"}}><Icon name="bulb" size={38} stroke={1.3}/></p>
           <p style={{fontFamily:FH,fontSize:20,color:G.text,margin:"0 0 6px",fontWeight:700}}>Describe lo que necesitas</p>
           <p style={{fontFamily:FB,fontSize:13,margin:0}}>Usa el buscador o los filtros rápidos para encontrar el plato ideal</p>
         </div>
@@ -2796,7 +2846,7 @@ function DishCard({dish,index,onAddRecipe,onOpenRecipes}){
   const[open,setOpen]=useState(false);
   const[creating,setCreating]=useState(false);
   const[saved,setSaved]=useState(false);
-  const catColors={"Entradas":"#1B4FD8","Postres":"#7C3AED","Carnes":"#DC2626","Pescados & Mariscos":"#0891B2","Sopas & Caldos":"#059669","Vegetariano & Vegano":"#16A34A","Panadería & Repostería":"#D97706","Bebidas & Cócteles":"#7C3AED"};
+  const catColors={"Entradas":"#4F6146","Postres":"#9C5B4E","Carnes":"#A14435","Pescados & Mariscos":"#4E7180","Sopas & Caldos":"#A9762C","Vegetariano & Vegano":"#5C7A4E","Panadería & Repostería":"#B0844A","Bebidas & Cócteles":"#7E5E70"};
   const col=catColors[dish.categoria]||G.blue;
   const difColor=d=>d==="Fácil"?G.green:d==="Media"?G.gold:G.red;
 
@@ -2829,7 +2879,7 @@ function DishCard({dish,index,onAddRecipe,onOpenRecipes}){
             <div style={{display:"flex",gap:6,marginBottom:6,flexWrap:"wrap",alignItems:"center"}}>
               <span style={{background:col+"15",border:`1px solid ${col}33`,padding:"2px 8px",borderRadius:20,fontSize:9,color:col,fontWeight:700,fontFamily:FB}}>{dish.categoria}</span>
               <span style={{background:difColor(dish.dificultad)+"15",border:`1px solid ${difColor(dish.dificultad)}33`,padding:"2px 8px",borderRadius:20,fontSize:9,color:difColor(dish.dificultad),fontWeight:600,fontFamily:FB}}>{dish.dificultad}</span>
-              {dish.tiempo&&<span style={{fontSize:10,color:G.textMut,fontFamily:FB}}>⏱ {dish.tiempo}</span>}
+              {dish.tiempo&&<span style={{fontSize:10,color:G.textMut,fontFamily:FB,display:"inline-flex",alignItems:"center",gap:4}}><Icon name="clock" size={12}/>{dish.tiempo}</span>}
             </div>
             <p style={{fontFamily:FH,fontSize:17,color:G.text,margin:"0 0 4px",fontWeight:700,lineHeight:1.2}}>{dish.nombre}</p>
             <p style={{fontFamily:FB,fontSize:12,color:G.textMid,margin:0,lineHeight:1.5}}>{dish.descripcion}</p>
@@ -2848,7 +2898,7 @@ function DishCard({dish,index,onAddRecipe,onOpenRecipes}){
             {!saved
               ?<button onClick={createRecipe} disabled={creating} style={{...bv("p",{padding:"8px 16px",fontSize:11,borderRadius:6,opacity:creating?.65:1}),display:"flex",alignItems:"center",gap:6}}
                   onMouseOver={e=>{if(!creating)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
-                  {creating?"Generando receta…":"📋 Crear Receta Completa"}
+                  {creating?"Generando receta…":"Crear receta completa"}
                 </button>
               :<>
                 <span style={{fontFamily:FB,fontSize:11,color:G.green,fontWeight:600}}>✓ Guardada en repositorio</span>
@@ -2905,7 +2955,7 @@ function CategoryBrowser({cat,extended,custom,selected,onToggle,onClose,search,s
         {(custom||[]).filter(n=>n.toLowerCase().includes(search.toLowerCase())).map(n=>{
           const isSel=selected.includes(n);
           return(
-            <button key={`c-${n}`} onClick={()=>onToggle(n)} style={{padding:"4px 11px",border:`1px solid ${isSel?cat.col:"#D97706"}`,borderRadius:20,background:isSel?cat.col+"18":"#FFF7ED",color:isSel?cat.col:"#92400E",cursor:"pointer",fontFamily:FB,fontSize:11,fontWeight:isSel?700:500,transition:"all .15s",display:"flex",alignItems:"center",gap:4}}>
+            <button key={`c-${n}`} onClick={()=>onToggle(n)} style={{padding:"4px 11px",border:`1px solid ${isSel?cat.col:"#A9762C"}`,borderRadius:20,background:isSel?cat.col+"18":"#FFF7ED",color:isSel?cat.col:"#6E5A3A",cursor:"pointer",fontFamily:FB,fontSize:11,fontWeight:isSel?700:500,transition:"all .15s",display:"flex",alignItems:"center",gap:4}}>
               <span style={{fontSize:8,opacity:.7}}>★</span>{n}{isSel&&<span style={{fontSize:9}}>✓</span>}
             </button>
           );
@@ -2932,7 +2982,7 @@ function SparkCard({card, index, defaultOpen, onAddRecipe, onOpenRecipes}){
   const[open,setOpen]=useState(defaultOpen||false);
   const[creating,setCreating]=useState(false);
   const[saved,setSaved]=useState(false);
-  const colors=["#1B4FD8","#059669","#7C3AED"];
+  const colors=["#1B4FD8","#54694A","#7C3AED"];
   const col=colors[index%colors.length];
 
   const createRecipe=async()=>{
@@ -3013,7 +3063,7 @@ Genera una receta completa. Responde SOLO con este JSON válido:
             {!saved
               ?<button onClick={createRecipe} disabled={creating} style={{...bv("p",{padding:"8px 16px",fontSize:11,borderRadius:6,background:col,opacity:creating?.65:1}),display:"flex",alignItems:"center",gap:6}}
                   onMouseOver={e=>{if(!creating)e.currentTarget.style.opacity=".85";}} onMouseOut={e=>e.currentTarget.style.opacity="1"}>
-                  {creating?"Generando receta…":"📋 Crear Receta Completa"}
+                  {creating?"Generando receta…":"Crear receta completa"}
                 </button>
               :<>
                 <span style={{fontFamily:FB,fontSize:11,color:G.green,fontWeight:600}}>✓ Receta guardada en el repositorio</span>
