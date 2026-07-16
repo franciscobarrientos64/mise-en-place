@@ -383,7 +383,7 @@ plating:"Molde cilíndrico individual desmoldado sobre plato frío. Capa visible
 {id:"i111",name:"Queso parmesano rallado",quantity:200,unit:"g",yieldPct:100}]}
 ]}
 ];
-const DEMO_C=[{id:"c1",name:"Firma",color:COLL_COLORS[0]},{id:"c2",name:"Menú Degustación",color:COLL_COLORS[1]}];
+const DEMO_C=[{id:"c1",name:"Firma",color:COLL_COLORS[0],favorite:true},{id:"c2",name:"Menú Degustación",color:COLL_COLORS[1],favorite:false}];
 
 /* ══════════════════════════════════════════
    APP
@@ -543,7 +543,11 @@ function App(){
     }catch(e){}
     return DEMO_R;
   });
-  const[colls,setColls]=useState(DEMO_C);
+  const[colls,setColls]=useState(()=>{
+    try{const saved=JSON.parse(localStorage.getItem('mep_colls')||'null');if(Array.isArray(saved)&&saved.length)return saved;}catch(e){}
+    return DEMO_C;
+  });
+  useEffect(()=>{try{localStorage.setItem('mep_colls',JSON.stringify(colls));}catch(e){}},[colls]);
   const[selId,setSelId]=useState(null);
   const[tab,setTab]=useState("recipe");
   const[country,setCtry]=useState("PE");
@@ -667,9 +671,13 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
   const[showImport,setShowImport]=useState(false);
   const[sel,setSel]=useState(new Set());
   const[selecting,setSelecting]=useState(false);
+  const[collF,setCollF]=useState(null);
   const toggleSel=id=>setSel(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;});
   const exitSel=()=>{setSel(new Set());setSelecting(false);};
-  const selRecipes=recipes.filter(r=>sel.has(r.id));
+  const favColls=(colls||[]).filter(c=>c.favorite);
+  const activeCollF=collF&&(colls||[]).some(c=>c.id===collF)?collF:null;
+  const shown=activeCollF?recipes.filter(r=>r.colls?.includes(activeCollF)):recipes;
+  const selRecipes=shown.filter(r=>sel.has(r.id));
   return(
     <div style={{maxWidth:1200,margin:"0 auto",padding:mob?"16px 12px":"48px 32px",paddingBottom:sel.size>0?"100px":undefined}}>
       {showImport&&<ImportModal onClose={()=>setShowImport(false)} onImport={r=>{onImport&&onImport(r);setShowImport(false);}} colls={colls}/>}
@@ -745,13 +753,24 @@ function Gallery({recipes,setRec,onOpen,search,setSearch,catF,setCatF,total,coll
           {CATEGORIES.map(c=><option key={c}>{c}</option>)}
         </select>
       </div>
-      {recipes.length===0
+      {favColls.length>0&&(
+        <div style={{display:"flex",gap:8,marginBottom:24,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={{fontFamily:FM,fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:G.textMut,display:"inline-flex",alignItems:"center",gap:5}}><Icon name="star" size={12} style={{fill:G.gold,color:G.gold}}/>Favoritas</span>
+          {favColls.map(c=>{const on=activeCollF===c.id;return(
+            <button key={c.id} onClick={()=>setCollF(on?null:c.id)} style={{display:"inline-flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,cursor:"pointer",fontFamily:FB,fontSize:11,fontWeight:600,border:`1px solid ${on?c.color:G.brd}`,background:on?c.color+"15":"transparent",color:on?c.color:G.textMid,transition:"all .15s"}}>
+              <span style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>{c.name}
+            </button>
+          );})}
+          {activeCollF&&<button onClick={()=>setCollF(null)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:11,color:G.textMut,textDecoration:"underline"}}>Limpiar</button>}
+        </div>
+      )}
+      {shown.length===0
         ?<div style={{textAlign:"center",padding:"80px 0",color:G.textMut}}>
             <p style={{fontFamily:FH,fontSize:22,color:G.text,margin:"0 0 8px",fontWeight:700}}>Sin resultados</p>
-            <p style={{fontSize:12}}>Agrega tu primera receta con el botón superior derecho</p>
+            <p style={{fontSize:12}}>{activeCollF?"Esta colección no tiene recetas que coincidan con el filtro":"Agrega tu primera receta con el botón superior derecho"}</p>
           </div>
         :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:20}}>
-            {recipes.map(r=>(
+            {shown.map(r=>(
               <div key={r.id} style={{position:"relative"}}>
                 {selecting&&(
                   <div onClick={()=>toggleSel(r.id)}
@@ -1693,27 +1712,30 @@ function AddRecipe({onSave,onCancel,colls,initialRecipe}){
 function Organize({recipes,colls,setColls,onOpen}){
   const[newName,setNewName]=useState("");
   const[newCol,setNewCol]=useState(COLL_COLORS[0]);
-  const addColl=()=>{if(!newName.trim())return;setColls(p=>[...p,{id:gid(),name:newName.trim(),color:newCol}]);setNewName("");};
+  const addColl=()=>{if(!newName.trim())return;setColls(p=>[...p,{id:gid(),name:newName.trim(),color:newCol,favorite:false}]);setNewName("");};
   const delColl=id=>setColls(p=>p.filter(c=>c.id!==id));
+  const toggleFav=id=>setColls(p=>p.map(c=>c.id===id?{...c,favorite:!c.favorite}:c));
+  const sortedColls=[...colls].sort((a,b)=>(b.favorite?1:0)-(a.favorite?1:0));
   const uncollected=recipes.filter(r=>!r.colls||r.colls.length===0);
   return(
     <div style={{maxWidth:1100,margin:"0 auto",padding:useMobile()?"16px 12px":"48px 32px"}}>
-      <p style={{fontFamily:FB,fontSize:10,letterSpacing:3,textTransform:"uppercase",color:G.blue,fontWeight:600,marginBottom:8}}>Organización</p>
-      <h1 style={{fontFamily:FH,fontSize:38,color:G.text,margin:"0 0 4px",fontWeight:700,letterSpacing:-.5}}>Colecciones</h1>
-      <p style={{color:G.textMut,fontSize:13,margin:"0 0 32px",fontFamily:FB}}>Organiza tus recetas en carpetas temáticas. Asígnalas desde la vista de detalle de cada receta.</p>
+      <p style={{fontFamily:FM,fontSize:10.5,letterSpacing:2.5,textTransform:"uppercase",color:G.blue,fontWeight:500,marginBottom:10}}>Organización</p>
+      <h1 style={{fontFamily:FH,fontSize:38,color:G.text,margin:"0 0 4px",fontWeight:700,letterSpacing:"-.02em"}}>Colecciones</h1>
+      <p style={{color:G.textMut,fontSize:13,margin:"0 0 32px",fontFamily:FB}}>Organiza tus recetas en carpetas temáticas. Asígnalas desde el detalle de cada receta. Marca tus colecciones con la estrella para fijarlas como favoritas y filtrarlas al instante desde el Archivo.</p>
       <div style={{border:`1px solid ${G.brd}`,borderRadius:10,padding:"20px",marginBottom:28,display:"flex",gap:14,alignItems:"flex-end",flexWrap:"wrap",background:G.surf}}>
         <div style={{flex:1,minWidth:160}}><Label t="Nueva Colección"/><input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addColl()} placeholder="Nombre de la colección…" style={inp()}/></div>
         <div><Label t="Color"/><div style={{display:"flex",gap:6}}>{COLL_COLORS.map(c=><button key={c} onClick={()=>setNewCol(c)} style={{width:24,height:24,borderRadius:"50%",background:c,border:newCol===c?`3px solid ${G.text}`:`2px solid transparent`,cursor:"pointer"}}/>)}</div></div>
         <button onClick={addColl} style={bv("p",{padding:"9px 18px"})} onMouseOver={e=>e.currentTarget.style.background=G.blueHov} onMouseOut={e=>e.currentTarget.style.background=G.blue}>Crear</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:18,marginBottom:28}}>
-        {colls.map(coll=>{const cr=recipes.filter(r=>r.colls?.includes(coll.id));return(
-          <div key={coll.id} style={{border:`1px solid ${G.brd}`,borderRadius:10,overflow:"hidden",background:G.w,boxShadow:"0 1px 4px rgba(0,0,0,.04)"}}>
+        {sortedColls.map(coll=>{const cr=recipes.filter(r=>r.colls?.includes(coll.id));return(
+          <div key={coll.id} style={{border:`1px solid ${coll.favorite?G.gold+"66":G.brd}`,borderRadius:10,overflow:"hidden",background:G.w,boxShadow:coll.favorite?"0 2px 10px rgba(169,118,44,.10)":"0 1px 4px rgba(0,0,0,.04)"}}>
             <div style={{background:coll.color+"10",borderBottom:`1px solid ${coll.color}30`,padding:"14px 18px",display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:10,height:10,borderRadius:"50%",background:coll.color,flexShrink:0}}/>
               <span style={{fontFamily:FH,fontSize:17,color:G.text,flex:1,fontWeight:700}}>{coll.name}</span>
               <span style={{fontSize:10,color:G.textMut,fontFamily:FB}}>{cr.length} receta{cr.length!==1?"s":""}</span>
-              <button onClick={()=>delColl(coll.id)} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontSize:13}}>✕</button>
+              <button onClick={()=>toggleFav(coll.id)} title={coll.favorite?"Quitar de favoritas":"Marcar como favorita"} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",padding:2,color:coll.favorite?G.gold:G.textMut}}><Icon name="star" size={16} style={{fill:coll.favorite?G.gold:"none"}}/></button>
+              <button onClick={()=>{if(window.confirm('¿Eliminar la colección "'+coll.name+'"?'))delColl(coll.id);}} title="Eliminar colección" style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontSize:13,lineHeight:1,padding:2}}>✕</button>
             </div>
             <div style={{padding:"12px 18px",display:"flex",flexDirection:"column",gap:4,minHeight:56}}>
               {cr.length===0&&<p style={{color:G.textMut,fontSize:11,margin:0,fontStyle:"italic",fontFamily:FB}}>Sin recetas asignadas</p>}
