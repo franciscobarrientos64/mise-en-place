@@ -101,6 +101,7 @@ const bv = (v="p",x={}) => ({
 /* ══ ICONOS — set line propio (Evolving). Reemplaza emojis. currentColor + trazo fino. ══ */
 const ICON_PATHS={
   plate:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.4"/>',
+  chefhat:'<path d="M6.5 13.8V19a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-5.2"/><path d="M6.5 13.8a3.5 3.5 0 0 1-1.1-6.8 4.1 4.1 0 0 1 7.7-1.6 4.1 4.1 0 0 1 5.5 1.6 3.5 3.5 0 0 1-1.1 6.8z"/><path d="M6.6 16.6h10.8"/>',
   folder:'<path d="M3 7a2 2 0 0 1 2-2h3.6a2 2 0 0 1 1.4.6L11.4 7H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   flask:'<path d="M9 3h6"/><path d="M10 3v6.2L5.3 17a2 2 0 0 0 1.7 3h10a2 2 0 0 0 1.7-3L14 9.2V3"/><path d="M7.7 15h8.6"/>',
   wheel:'<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17M6 6l12 12M18 6 6 18"/>',
@@ -635,6 +636,7 @@ function App(){
         {view==="add"&&<AddRecipe onSave={saveR} onCancel={goBack} colls={colls}/>}
         {view==="edit"&&recipes.find(r=>r.id===editId)&&<AddRecipe initialRecipe={recipes.find(r=>r.id===editId)} onSave={saveEdit} onCancel={()=>setView("detail")} colls={colls}/>}
       </>}
+      {nav==="chef"&&<ChefPrivado onAddRecipe={r=>{setRec(p=>[...p,r]);sbUpsert(r);}} onOpenRecipes={()=>{setNav("recipes");setView("gallery");}}/>}
       {nav==="organize"&&<Organize recipes={recipes} colls={colls} setColls={setColls} onOpen={openR}/>}
       {nav==="lab"&&<FlavorLab recipes={recipes} onAddRecipe={r=>setRec(p=>[...p,{...r,id:gid()}])} onOpenRecipes={()=>{setNav("recipes");setView("gallery");}}/>}
       <UploadToast state={upload} onDismiss={dismissUpload}/>
@@ -644,7 +646,7 @@ function App(){
 
 function TopBar({nav,setNav,view,onBack,recName,onAdd,syncing,synced,onRefresh}){
   const mob=useMobile();
-  const NAV=[["recipes","Recetas","plate"],["organize","Colecciones","folder"],["lab","Laboratorio","flask"]];
+  const NAV=[["recipes","Recetas","plate"],["chef","Chef Privado","chefhat"],["organize","Colecciones","folder"],["lab","Laboratorio","flask"]];
   return(
     <header style={{background:G.w,borderBottom:`1px solid ${G.brd}`,padding:mob?"0 16px":"0 32px",height:mob?52:56,display:"flex",alignItems:"center",gap:mob?8:16,position:"sticky",top:0,zIndex:50}}>
       {nav==="recipes"&&view!=="gallery"
@@ -2967,6 +2969,613 @@ function DishCard({dish,index,onAddRecipe,onOpenRecipes}){
                 <button onClick={()=>onOpenRecipes&&onOpenRecipes()} style={bv("ghost",{fontSize:11,padding:"6px 12px",borderRadius:6})} onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>Ver en Recetas →</button>
               </>}
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CHEF PRIVADO — de la ocasión + lo que tienes a una velada completa
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Cada ocasión lleva su estrategia de anfitrión: eso es lo que el
+   modelo no sabe inferir solo y lo que separa un menú de una velada. */
+const OCASIONES=[
+  {id:"conquistar",label:"Conquistar a alguien",hint:"Primera o segunda cita en casa",
+   estrategia:"Cena íntima para dos. Regla de oro: el anfitrión NO puede desaparecer en la cocina — máximo un plato que exija atención al momento, todo lo demás resuelto antes de que llegue. Nada de frituras (el olor se queda en la ropa y en la casa), nada que ensucie las manos ni obligue a pelear con el cubierto, nada con ajo crudo agresivo ni con riesgo alto de alergia. Sensualidad por textura y aroma, no por porciones enormes. Que quede espacio para el postre y para la conversación."},
+  {id:"suegros",label:"Suegros / la familia",hint:"Primera impresión con los padres",
+   estrategia:"Impecable pero jamás pretencioso. El objetivo es leerse generoso y confiable, no listo. Nada de espumas, deconstrucciones ni nombres en francés. Producto reconocible, cocción perfecta, porciones abundantes, un detalle casero que hable de cuidado (un pan, un fondo hecho en casa). Preguntar por restricciones se ve bien, pero el menú debe funcionar aunque alguien coma poco picante o poco exótico. Servir a tiempo: la puntualidad es parte del respeto."},
+  {id:"aniversario",label:"Aniversario",hint:"Celebrar a alguien que ya te conoce",
+   estrategia:"Aquí sí se permite ambición y un guiño personal: un plato con memoria, algo que evoque un lugar o un momento compartido. Menú de tiempos cortos, ritmo pausado, un final dulce con presencia. Vale invertir en un ingrediente ancla."},
+  {id:"amigos",label:"Cena con amigos",hint:"Mesa larga, sin protocolo",
+   estrategia:"Comida para compartir, fuentes al centro, todo escalable. Prioriza platos que aguanten media hora sin arruinarse y que se cocinen mayormente antes de que llegue el primero. Un solo golpe de efecto basta. Que el anfitrión también se siente a comer."},
+  {id:"ninos",label:"Cumpleaños de niños",hint:"Público exigente y honesto",
+   estrategia:"Sabores limpios y reconocibles, nada de mezclas raras ni texturas viscosas. Cero picante, cero alcohol, ojo con frutos secos por alergias. Divertido con las manos, colorido de verdad (no de colorante). Un plato paralelo para los adultos que no sea otro menú entero."},
+  {id:"negocios",label:"Cena de negocios",hint:"Se come mientras se conversa",
+   estrategia:"Neutralidad elegante. Nada que manche, que huela fuerte, que se coma con las manos ni que exija concentración. Porciones moderadas, tiempos predecibles, opción vegetariana resuelta de fábrica. El anfitrión debe poder hablar todo el tiempo: cero platos de último minuto."},
+  {id:"domingo",label:"Domingo en familia",hint:"Sobremesa larga",
+   estrategia:"Cocina de olla y de horno: lo que mejora mientras espera. Un plato ancla generoso, guarniciones simples, postre que se hace en la mañana. Que sobre comida — sobrar es parte del gesto."},
+  {id:"perdon",label:"Pedir perdón",hint:"La comida como disculpa",
+   estrategia:"Cocinar exactamente lo que a la otra persona le gusta, no lo que a ti te luce. Esfuerzo visible y honesto (algo largo, hecho a mano), sin ostentación. Sin sorpresas de sabor: no es la noche de experimentar."},
+  {id:"solo",label:"Cocinar para mí",hint:"Sin público",
+   estrategia:"Una sola persona, mínimo lavado, máximo placer. Aprovecha lo que ya está abierto en la refrigeradora. Permite técnica nueva: es la noche perfecta para practicar sin costo social."},
+  {id:"lucirse",label:"Impresionar con poco",hint:"Presupuesto corto, efecto alto",
+   estrategia:"El lujo está en la técnica y en el tiempo, no en el ticket. Cortes humildes bien tratados, verduras de estación, un fondo o una salsa que justifique todo el plato. Un solo elemento caro como acento, si acaso. Emplatado limpio."},
+];
+
+const NIVELES=[
+  {id:"cero",label:"Nunca cociné",desc:"Sé hervir agua y poco más",
+   guia:"Máximo 6 ingredientes por plato y 5 pasos. Nada de emulsiones, masas, caramelo, ni cocciones que dependan de leer el punto. Da tiempos y temperaturas exactas y señales sensoriales ('cuando el borde esté dorado'), nunca 'al punto' ni 'a ojo'. Una sola cosa en el fuego a la vez."},
+  {id:"defiendo",label:"Me defiendo",desc:"Cocino de rutina, sin técnica",
+   guia:"Puede saltear, hornear, hacer una salsa simple y manejar dos ollas a la vez. Evita emulsiones inestables, temperaturas críticas y pastelería fina. Explica el porqué de cada técnica en una línea."},
+  {id:"bien",label:"Cocino bien",desc:"Me sale rico y me arriesgo",
+   guia:"Puede manejar cocciones controladas, reducciones, emulsiones básicas, masas simples y timing de tres elementos. Puedes proponer una técnica nueva por menú si la explicas bien."},
+  {id:"semipro",label:"Casi profesional",desc:"Mise en place, técnica, timing",
+   guia:"Habla en lenguaje de cocina profesional. Puedes proponer fondos, clarificados, baja temperatura, fermentos rápidos, emplatado de restaurante y un menú de tiempos con servicio escalonado."},
+];
+
+const DESPENSA_GRUPOS=[
+  {g:"Proteínas",items:["Pollo","Res","Cerdo","Cordero","Pescado blanco","Salmón","Atún","Camarones","Pulpo","Huevos","Tofu","Legumbres secas"]},
+  {g:"Verduras",items:["Cebolla","Ajo","Tomate","Papa","Camote","Zanahoria","Zapallo","Champiñones","Espinaca","Rúcula","Brócoli","Choclo","Palta","Pimiento","Apio","Poro"]},
+  {g:"Frutas",items:["Limón","Naranja","Manzana","Plátano","Fresa","Maracuyá","Mango","Piña","Higos","Uvas"]},
+  {g:"Almidones",items:["Arroz","Pasta","Quinua","Pan","Harina","Papa amarilla","Tortillas","Polenta"]},
+  {g:"Lácteos",items:["Mantequilla","Leche","Crema de leche","Queso fresco","Parmesano","Yogurt","Queso azul","Mozzarella"]},
+  {g:"Despensa",items:["Aceite de oliva","Vinagre","Soya","Mostaza","Miel","Azúcar","Chocolate","Frutos secos","Aceitunas","Alcaparras","Conservas de tomate","Caldo"]},
+  {g:"Aromáticos",items:["Ají amarillo","Ají panca","Rocoto","Culantro","Perejil","Albahaca","Romero","Tomillo","Jengibre","Comino","Pimienta","Sal en escamas"]},
+];
+
+const BAR_GRUPOS=[
+  {g:"Destilados",items:["Pisco","Ron","Gin","Vodka","Whisky","Tequila","Mezcal","Cachaça","Brandy"]},
+  {g:"Vinos",items:["Tinto","Blanco","Espumante","Rosé","Vermut","Jerez","Oporto"]},
+  {g:"Mixers",items:["Tónica","Soda","Ginger ale","Jugo de limón","Jarabe de goma","Amargo de angostura","Triple sec","Licor de café","Cerveza"]},
+];
+
+const EQUIPO=["Horno","Parrilla","Licuadora","Procesador","Batidora","Termómetro","Mandolina","Sartén de hierro","Olla a presión","Air fryer","Coctelera","Vaporera"];
+
+const VELADA_SCHEMA={
+  type:"object",
+  properties:{
+    titulo:{type:"string"},
+    lectura:{type:"string"},
+    concepto:{type:"string"},
+    coctel:{type:"object",properties:{
+      nombre:{type:"string"},descripcion:{type:"string"},
+      ingredientes:{type:"array",items:{type:"string"}},
+      preparacion:{type:"string"},sinAlcohol:{type:"string"}
+    },required:["nombre","descripcion","ingredientes","preparacion","sinAlcohol"],additionalProperties:false},
+    menu:{type:"array",items:{type:"object",properties:{
+      curso:{type:"string"},nombre:{type:"string"},descripcion:{type:"string"},
+      porque:{type:"string"},dificultad:{type:"string",enum:["Fácil","Media","Alta"]},
+      minutos:{type:"integer"},
+      ingredientes:{type:"array",items:{type:"object",properties:{
+        nombre:{type:"string"},cantidad:{type:"string"},tienes:{type:"boolean"}
+      },required:["nombre","cantidad","tienes"],additionalProperties:false}},
+      pasos:{type:"array",items:{type:"string"}},
+      truco:{type:"string"},planB:{type:"string"}
+    },required:["curso","nombre","descripcion","porque","dificultad","minutos","ingredientes","pasos","truco","planB"],additionalProperties:false}},
+    linea_tiempo:{type:"array",items:{type:"object",properties:{
+      momento:{type:"string"},acciones:{type:"array",items:{type:"string"}}
+    },required:["momento","acciones"],additionalProperties:false}},
+    compras:{type:"array",items:{type:"string"}},
+    mesa:{type:"object",properties:{
+      montaje:{type:"string"},ambiente:{type:"string"},maridaje:{type:"string"}
+    },required:["montaje","ambiente","maridaje"],additionalProperties:false},
+    advertencia:{type:"string"}
+  },
+  required:["titulo","lectura","concepto","coctel","menu","linea_tiempo","compras","mesa","advertencia"],
+  additionalProperties:false
+};
+
+const CHEF_STORE="mep_chef_cocina";
+const loadCocina=()=>{try{const s=JSON.parse(localStorage.getItem(CHEF_STORE)||"null");if(s)return s;}catch(e){}
+  return{despensa:[],bar:[],equipo:["Horno","Licuadora"],nivel:"defiendo"};};
+
+const shareVelada=(text,titulo)=>{
+  if(navigator.share){navigator.share({title:titulo,text}).catch(()=>{});return;}
+  navigator.clipboard.writeText(text).then(()=>alert("Plan copiado al portapapeles")).catch(()=>{});
+};
+
+const veladaToText=v=>{
+  const L=[v.titulo.toUpperCase(),"",v.concepto,"","— LA BARRA —",`${v.coctel.nombre}: ${v.coctel.descripcion}`,
+    ...v.coctel.ingredientes.map(i=>`  · ${i}`),`  ${v.coctel.preparacion}`,"","— EL MENÚ —"];
+  v.menu.forEach(p=>{
+    L.push(`${p.curso.toUpperCase()} · ${p.nombre} (${p.minutos} min · ${p.dificultad})`);
+    L.push(`  ${p.descripcion}`);
+    p.ingredientes.forEach(i=>L.push(`  ${i.tienes?"✓":"□"} ${i.nombre} — ${i.cantidad}`));
+    p.pasos.forEach((s,i)=>L.push(`  ${i+1}. ${s}`));
+    L.push(`  Truco: ${p.truco}`);L.push("");
+  });
+  L.push("— LÍNEA DE TIEMPO —");
+  v.linea_tiempo.forEach(t=>{L.push(t.momento);t.acciones.forEach(a=>L.push(`  □ ${a}`));});
+  L.push("","— LO QUE FALTA COMPRAR —");
+  v.compras.forEach(c=>L.push(`□ ${c}`));
+  L.push("",`Mesa: ${v.mesa.montaje}`,`Ambiente: ${v.mesa.ambiente}`,`Maridaje: ${v.mesa.maridaje}`,
+    "",`Ojo: ${v.advertencia}`,"","— mise-en-place-smoky.vercel.app");
+  return L.join("\n");
+};
+
+function ChipGroup({grupos,selected,onToggle,custom,onAddCustom}){
+  const[nuevo,setNuevo]=useState("");
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      {grupos.map(({g,items})=>(
+        <div key={g} style={{display:"flex",gap:6,alignItems:"baseline",flexWrap:"wrap"}}>
+          <span style={{fontFamily:FM,fontSize:9,color:G.textMut,letterSpacing:1.6,textTransform:"uppercase",fontWeight:500,width:78,flexShrink:0}}>{g}</span>
+          {items.map(it=>{
+            const on=selected.includes(it);
+            return <button key={it} onClick={()=>onToggle(it)} style={{padding:"3px 10px",border:`1px solid ${on?G.blue:G.brd}`,borderRadius:20,background:on?G.blueTint:"transparent",color:on?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:11.5,fontWeight:on?600:400,transition:"all .12s"}}>{on?"✓ ":""}{it}</button>;
+          })}
+        </div>
+      ))}
+      <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{fontFamily:FM,fontSize:9,color:G.textMut,letterSpacing:1.6,textTransform:"uppercase",fontWeight:500,width:78,flexShrink:0}}>Otro</span>
+        {(custom||[]).map(c=>(
+          <button key={c} onClick={()=>onToggle(c)} style={{padding:"3px 10px",border:`1px solid ${G.blue}`,borderRadius:20,background:G.blueTint,color:G.blue,cursor:"pointer",fontFamily:FB,fontSize:11.5,fontWeight:600}}>✓ {c} ✕</button>
+        ))}
+        <input value={nuevo} onChange={e=>setNuevo(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter"&&nuevo.trim()){onAddCustom(nuevo.trim());setNuevo("");}}}
+          placeholder="agregar y Enter"
+          style={inp({width:150,padding:"3px 10px",fontSize:11.5,borderRadius:20,background:"transparent"})}/>
+      </div>
+    </div>
+  );
+}
+
+function ChefPrivado({onAddRecipe,onOpenRecipes}){
+  const mob=useMobile();
+  const[cocina,setCocina]=useState(loadCocina);
+  const[ocasion,setOcasion]=useState("");
+  const[detalle,setDetalle]=useState("");
+  const[comensales,setComensales]=useState(2);
+  const[tiempo,setTiempo]=useState("2-3 horas");
+  const[presupuesto,setPresupuesto]=useState("Medio");
+  const[restric,setRestric]=useState("");
+  const[abierto,setAbierto]=useState("despensa");
+  const[velada,setVelada]=useState(null);
+  const[loading,setLoading]=useState(false);
+  const[error,setError]=useState("");
+
+  useEffect(()=>{try{localStorage.setItem(CHEF_STORE,JSON.stringify(cocina));}catch(e){}},[cocina]);
+
+  const tog=(campo,v)=>setCocina(c=>({...c,[campo]:c[campo].includes(v)?c[campo].filter(x=>x!==v):[...c[campo],v]}));
+  const agregarVarios=campo=>items=>setCocina(c=>({...c,[campo]:[...new Set([...c[campo],...items])]}));
+  const conocidos=campo=>(campo==="despensa"?DESPENSA_GRUPOS:BAR_GRUPOS).flatMap(x=>x.items);
+  const customs=campo=>cocina[campo].filter(i=>!conocidos(campo).includes(i));
+
+  const oc=OCASIONES.find(o=>o.id===ocasion);
+  const nv=NIVELES.find(n=>n.id===cocina.nivel);
+
+  const cocinar=async()=>{
+    if(!oc){setError("Elige la ocasión — de ahí sale todo lo demás");return;}
+    setLoading(true);setError("");setVelada(null);
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),58000);
+    const brief=[
+      `OCASIÓN: ${oc.label} — ${oc.hint}`,
+      `ESTRATEGIA DE ANFITRIÓN PARA ESTA OCASIÓN (respétala como si fuera el brief del cliente): ${oc.estrategia}`,
+      detalle.trim()?`CONTEXTO QUE AGREGA EL ANFITRIÓN: ${detalle.trim()}`:"",
+      `COMENSALES: ${comensales}`,
+      `TIEMPO DISPONIBLE HOY: ${tiempo}`,
+      `PRESUPUESTO: ${presupuesto}`,
+      restric.trim()?`RESTRICCIONES / ALERGIAS: ${restric.trim()}`:"RESTRICCIONES: ninguna declarada",
+      `NIVEL DE QUIEN COCINA: ${nv.label} — ${nv.guia}`,
+      `EQUIPO DISPONIBLE: ${cocina.equipo.length?cocina.equipo.join(", "):"solo lo básico: fuego, ollas, sartén, cuchillo"}`,
+      `EN LA DESPENSA/REFRIGERADORA: ${cocina.despensa.length?cocina.despensa.join(", "):"nada declarado — asume que compra todo"}`,
+      `EN EL BAR: ${cocina.bar.length?cocina.bar.join(", "):"nada declarado"}`,
+      "",
+      "Diseña la velada completa. Reglas:",
+      "· Apóyate en lo que YA tiene: al menos dos tercios de los ingredientes del menú deben salir de su despensa y su bar. Marca cada ingrediente con tienes:true si está en su lista y tienes:false si debe comprarlo.",
+      "· El cóctel de bienvenida se hace con lo que hay en su bar. Si el bar está vacío o la ocasión no admite alcohol, propón uno sin alcohol y déjalo también en el campo sinAlcohol.",
+      "· Ajusta cantidades a los comensales y el menú entero al tiempo declarado, contando el tiempo real de manos, no solo de cocción.",
+      "· Cada plato: el truco es el detalle técnico que separa el resultado bueno del mediocre; el planB es qué hacer si algo se corta, se pasa o falta un ingrediente.",
+      "· La línea de tiempo va desde el día anterior hasta el momento de servir, en momentos concretos (por ejemplo 'La víspera', 'Tres horas antes', 'Quince minutos antes').",
+      "· La advertencia es el error específico que arruinaría esta noche en particular.",
+      "· Todo en español neutro, tuteando. Sin emojis. Concreto, cálido, sin relleno."
+    ].filter(Boolean).join("\n");
+    try{
+      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),signal:ctrl.signal,
+        body:JSON.stringify({model:"claude-opus-5",max_tokens:8000,
+          output_config:{effort:"low",format:{type:"json_schema",schema:VELADA_SCHEMA}},
+          system:"Eres el chef privado de esta casa: cocinas con técnica de restaurante y piensas como anfitrión de hotelería de lujo. Tu trabajo no es proponer platos bonitos, es que la noche salga bien: lees la ocasión, proteges al que cocina de su propio nivel y diseñas un servicio que se pueda ejecutar sin pánico. Responde únicamente con el JSON del esquema.",
+          messages:[{role:"user",content:brief}]})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data?.error?.message||"Error de la API");
+      const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      const m=txt.match(/\{[\s\S]*\}/);
+      setVelada(JSON.parse(m?m[0]:txt));
+    }catch(e){
+      setError(e.name==="AbortError"?"La cocina se demoró demasiado. Vuelve a intentar — suele salir a la segunda.":"No se pudo diseñar la velada: "+e.message);
+    }
+    clearTimeout(t);setLoading(false);
+  };
+
+  const secStyle={borderTop:`1px solid ${G.brd}`,paddingTop:20,marginTop:22};
+  const eyebrow={fontFamily:FM,fontSize:9.5,letterSpacing:2.4,textTransform:"uppercase",color:G.blue,fontWeight:500,margin:"0 0 10px"};
+
+  return(
+    <div style={{maxWidth:1080,margin:"0 auto",padding:mob?"28px 16px 60px":"40px 32px 72px"}}>
+      <p style={eyebrow}>Chef Privado</p>
+      <h1 style={{fontFamily:FH,fontSize:mob?27:34,color:G.text,margin:"0 0 6px",fontWeight:700,letterSpacing:"-.02em"}}>Dime la ocasión y lo que tienes</h1>
+      <p style={{fontFamily:FB,fontSize:13.5,color:G.textMid,margin:0,maxWidth:560,lineHeight:1.6}}>Te devuelvo la velada entera: cóctel, menú a tu nivel, línea de tiempo y lo poco que te falta comprar.</p>
+
+      {/* ── 1. LA OCASIÓN ── */}
+      <div style={secStyle}>
+        <p style={eyebrow}>01 · La ocasión</p>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap",marginBottom:14}}>
+          {OCASIONES.map(o=>{
+            const on=ocasion===o.id;
+            return(
+              <button key={o.id} onClick={()=>setOcasion(on?"":o.id)} style={{textAlign:"left",padding:"8px 13px",border:`1px solid ${on?G.blue:G.brd}`,borderRadius:8,background:on?G.blueTint:"transparent",cursor:"pointer",transition:"all .14s"}}>
+                <span style={{display:"block",fontFamily:FB,fontSize:13,fontWeight:on?700:500,color:on?G.blue:G.text}}>{o.label}</span>
+                <span style={{display:"block",fontFamily:FB,fontSize:10.5,color:G.textMut,marginTop:1}}>{o.hint}</span>
+              </button>
+            );
+          })}
+        </div>
+        {oc&&<p style={{fontFamily:FB,fontSize:12,color:G.textMid,lineHeight:1.65,margin:"0 0 14px",paddingLeft:12,borderLeft:`2px solid ${G.blue}`}}>{oc.estrategia}</p>}
+        <textarea value={detalle} onChange={e=>setDetalle(e.target.value)} rows={2}
+          placeholder="Cuéntame más: a quién le cocinas, qué le gusta, qué salió mal la última vez…"
+          style={inp({resize:"vertical",fontSize:13,lineHeight:1.6,marginBottom:10})}/>
+        <div style={{display:"flex",gap:mob?10:18,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <div><p style={{...eyebrow,color:G.textMut,margin:"0 0 5px"}}>Comensales</p>
+            <input type="number" min={1} max={30} value={comensales} onChange={e=>setComensales(+e.target.value||1)} style={inp({width:78,fontSize:13})}/></div>
+          <div><p style={{...eyebrow,color:G.textMut,margin:"0 0 5px"}}>Tiempo</p>
+            <select value={tiempo} onChange={e=>setTiempo(e.target.value)} style={inp({width:mob?140:170,fontSize:13})}>
+              {["Menos de 1 hora","1-2 horas","2-3 horas","Media tarde entera","Desde el día anterior"].map(t=><option key={t}>{t}</option>)}
+            </select></div>
+          <div><p style={{...eyebrow,color:G.textMut,margin:"0 0 5px"}}>Presupuesto</p>
+            <select value={presupuesto} onChange={e=>setPresupuesto(e.target.value)} style={inp({width:mob?130:150,fontSize:13})}>
+              {["Ajustado","Medio","Sin límite razonable"].map(t=><option key={t}>{t}</option>)}
+            </select></div>
+          <div style={{flex:1,minWidth:200}}><p style={{...eyebrow,color:G.textMut,margin:"0 0 5px"}}>Alergias / restricciones</p>
+            <input value={restric} onChange={e=>setRestric(e.target.value)} placeholder="sin gluten, alérgica a los mariscos…" style={inp({fontSize:13})}/></div>
+        </div>
+      </div>
+
+      {/* ── 2. TU COCINA Y TU BAR ── */}
+      <div style={secStyle}>
+        <div style={{display:"flex",alignItems:"baseline",gap:14,flexWrap:"wrap",marginBottom:12}}>
+          <p style={{...eyebrow,margin:0}}>02 · Tu cocina y tu bar</p>
+          <span style={{fontFamily:FB,fontSize:11.5,color:G.textMut}}>{cocina.despensa.length} en despensa · {cocina.bar.length} en el bar · se guarda para la próxima</span>
+        </div>
+        <div style={{display:"flex",gap:0,background:G.surf,borderRadius:8,padding:3,marginBottom:16,width:"fit-content"}}>
+          {[["despensa","Despensa","sprout"],["bar","Bar","glass"],["equipo","Equipo","flask"]].map(([id,label,ic])=>(
+            <button key={id} onClick={()=>setAbierto(id)} style={{padding:"7px 15px",border:"none",borderRadius:6,background:abierto===id?G.w:"transparent",color:abierto===id?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:abierto===id?700:500,boxShadow:abierto===id?"0 1px 4px rgba(23,21,15,.08)":"none",display:"inline-flex",alignItems:"center",gap:6}}>
+              <Icon name={ic} size={14} stroke={1.5}/>{label}
+            </button>
+          ))}
+        </div>
+        {abierto==="despensa"&&<>
+          <FotoInventario campo="despensa" yaTengo={cocina.despensa} onAgregar={agregarVarios("despensa")}/>
+          <ChipGroup grupos={DESPENSA_GRUPOS} selected={cocina.despensa} custom={customs("despensa")} onToggle={v=>tog("despensa",v)} onAddCustom={v=>tog("despensa",v)}/>
+        </>}
+        {abierto==="bar"&&<>
+          <FotoInventario campo="bar" yaTengo={cocina.bar} onAgregar={agregarVarios("bar")}/>
+          <ChipGroup grupos={BAR_GRUPOS} selected={cocina.bar} custom={customs("bar")} onToggle={v=>tog("bar",v)} onAddCustom={v=>tog("bar",v)}/>
+        </>}
+        {abierto==="equipo"&&<div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {EQUIPO.map(e=>{const on=cocina.equipo.includes(e);
+            return <button key={e} onClick={()=>tog("equipo",e)} style={{padding:"3px 10px",border:`1px solid ${on?G.blue:G.brd}`,borderRadius:20,background:on?G.blueTint:"transparent",color:on?G.blue:G.textMid,cursor:"pointer",fontFamily:FB,fontSize:11.5,fontWeight:on?600:400}}>{on?"✓ ":""}{e}</button>;})}
+        </div>}
+      </div>
+
+      {/* ── 3. TU NIVEL ── */}
+      <div style={secStyle}>
+        <p style={eyebrow}>03 · Qué tan bien cocinas</p>
+        <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+          {NIVELES.map(n=>{const on=cocina.nivel===n.id;
+            return(
+              <button key={n.id} onClick={()=>setCocina(c=>({...c,nivel:n.id}))} style={{textAlign:"left",padding:"8px 14px",border:`1px solid ${on?G.blue:G.brd}`,borderRadius:8,background:on?G.blueTint:"transparent",cursor:"pointer"}}>
+                <span style={{display:"block",fontFamily:FB,fontSize:13,fontWeight:on?700:500,color:on?G.blue:G.text}}>{n.label}</span>
+                <span style={{display:"block",fontFamily:FB,fontSize:10.5,color:G.textMut,marginTop:1}}>{n.desc}</span>
+              </button>
+            );})}
+        </div>
+      </div>
+
+      {/* ── ACCIÓN ── */}
+      <div style={{marginTop:26,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+        <button onClick={cocinar} disabled={loading} style={bv("p",{padding:"12px 26px",fontSize:13.5,borderRadius:8,opacity:loading?.6:1,cursor:loading?"wait":"pointer"})}
+          onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+          {loading?"Diseñando la velada…":"✦ Diseñar la velada"}
+        </button>
+        {velada&&<button onClick={()=>shareVelada(veladaToText(velada),velada.titulo)} style={bv("ghost",{padding:"11px 18px",fontSize:12.5,borderRadius:8,display:"inline-flex",alignItems:"center",gap:7})}
+          onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}><Icon name="download" size={14}/>Compartir el plan</button>}
+        {error&&<span style={{fontFamily:FB,fontSize:12,color:G.red}}>{error}</span>}
+      </div>
+      {loading&&<p style={{fontFamily:FB,fontSize:13,color:G.textMut,fontStyle:"italic",marginTop:18}}>Leyendo la ocasión, revisando tu despensa y armando el servicio… toma medio minuto.</p>}
+
+      {velada&&<VeladaPlan v={velada} comensales={comensales} onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>}
+    </div>
+  );
+}
+
+/* ══ LA VELADA — se lee como una carta impresa, no como un dashboard ══ */
+function VeladaPlan({v,comensales,onAddRecipe,onOpenRecipes}){
+  const mob=useMobile();
+  const eyebrow={fontFamily:FM,fontSize:9.5,letterSpacing:2.4,textTransform:"uppercase",color:G.blue,fontWeight:500,margin:"0 0 12px"};
+  return(
+    <div style={{marginTop:38,borderTop:`3px solid ${G.text}`,paddingTop:30}}>
+      <h2 style={{fontFamily:FH,fontSize:mob?26:36,color:G.text,margin:"0 0 10px",fontWeight:700,letterSpacing:"-.025em",lineHeight:1.12}}>{v.titulo}</h2>
+      <p style={{fontFamily:FB,fontSize:14,color:G.textMid,lineHeight:1.7,margin:"0 0 8px",maxWidth:640}}>{v.concepto}</p>
+      <p style={{fontFamily:FB,fontSize:12.5,color:G.textMut,lineHeight:1.7,margin:0,maxWidth:640,fontStyle:"italic"}}>{v.lectura}</p>
+
+      {/* La barra */}
+      <div style={{marginTop:30,paddingTop:22,borderTop:`1px solid ${G.brd}`}}>
+        <p style={eyebrow}>La barra</p>
+        <div style={{display:"flex",gap:mob?18:44,flexWrap:"wrap"}}>
+          <div style={{flex:"1 1 260px"}}>
+            <p style={{fontFamily:FH,fontSize:19,color:G.text,margin:"0 0 4px",fontWeight:700}}>{v.coctel.nombre}</p>
+            <p style={{fontFamily:FB,fontSize:12.5,color:G.textMid,margin:"0 0 10px",lineHeight:1.6}}>{v.coctel.descripcion}</p>
+            <p style={{fontFamily:FB,fontSize:12.5,color:G.textMid,margin:0,lineHeight:1.7}}>{v.coctel.preparacion}</p>
+          </div>
+          <div style={{flex:"0 1 240px"}}>
+            {v.coctel.ingredientes.map((i,k)=><p key={k} style={{fontFamily:FB,fontSize:12.5,color:G.textMid,margin:"0 0 3px"}}>· {i}</p>)}
+            {v.coctel.sinAlcohol&&<p style={{fontFamily:FB,fontSize:11.5,color:G.textMut,marginTop:10,lineHeight:1.6}}><span style={{fontFamily:FM,fontSize:9,letterSpacing:1.6,textTransform:"uppercase"}}>Sin alcohol</span><br/>{v.coctel.sinAlcohol}</p>}
+          </div>
+        </div>
+      </div>
+
+      {/* El menú */}
+      <div style={{marginTop:30,paddingTop:22,borderTop:`1px solid ${G.brd}`}}>
+        <p style={eyebrow}>El menú · {comensales} {comensales===1?"comensal":"comensales"}</p>
+        {v.menu.map((p,i)=><CursoRow key={i} p={p} onAddRecipe={onAddRecipe} onOpenRecipes={onOpenRecipes}/>)}
+      </div>
+
+      {/* Línea de tiempo */}
+      <div style={{marginTop:30,paddingTop:22,borderTop:`1px solid ${G.brd}`}}>
+        <p style={eyebrow}>La línea de tiempo</p>
+        {v.linea_tiempo.map((t,i)=>(
+          <div key={i} style={{display:"flex",gap:mob?12:24,marginBottom:16,flexDirection:mob?"column":"row"}}>
+            <p style={{fontFamily:FM,fontSize:10,letterSpacing:1.6,textTransform:"uppercase",color:G.text,fontWeight:500,margin:0,width:mob?"auto":150,flexShrink:0,paddingTop:2}}>{t.momento}</p>
+            <div style={{flex:1}}>{t.acciones.map((a,k)=><p key={k} style={{fontFamily:FB,fontSize:13,color:G.textMid,margin:"0 0 5px",lineHeight:1.6}}>○ {a}</p>)}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Compras + mesa */}
+      <div style={{marginTop:30,paddingTop:22,borderTop:`1px solid ${G.brd}`,display:"flex",gap:mob?24:48,flexWrap:"wrap"}}>
+        <div style={{flex:"1 1 260px"}}>
+          <p style={eyebrow}>Lo que te falta</p>
+          {v.compras.length===0
+            ?<p style={{fontFamily:FB,fontSize:13,color:G.green,margin:0}}>Nada: sale entero con lo que ya tienes.</p>
+            :v.compras.map((c,i)=><p key={i} style={{fontFamily:FB,fontSize:13,color:G.textMid,margin:"0 0 5px"}}>□ {c}</p>)}
+        </div>
+        <div style={{flex:"1 1 260px"}}>
+          <p style={eyebrow}>La mesa</p>
+          <p style={{fontFamily:FB,fontSize:13,color:G.textMid,margin:"0 0 8px",lineHeight:1.65}}>{v.mesa.montaje}</p>
+          <p style={{fontFamily:FB,fontSize:13,color:G.textMid,margin:"0 0 8px",lineHeight:1.65}}>{v.mesa.ambiente}</p>
+          <p style={{fontFamily:FB,fontSize:13,color:G.textMid,margin:0,lineHeight:1.65}}>{v.mesa.maridaje}</p>
+        </div>
+      </div>
+
+      {/* Advertencia */}
+      <div style={{marginTop:26,padding:"14px 18px",background:G.blueTint,borderLeft:`3px solid ${G.blue}`,borderRadius:"0 8px 8px 0"}}>
+        <p style={{fontFamily:FM,fontSize:9,letterSpacing:2,textTransform:"uppercase",color:G.blue,fontWeight:500,margin:"0 0 5px"}}>Lo único que no puedes fallar</p>
+        <p style={{fontFamily:FB,fontSize:13,color:G.textMid,margin:0,lineHeight:1.65}}>{v.advertencia}</p>
+      </div>
+    </div>
+  );
+}
+
+function CursoRow({p,onAddRecipe,onOpenRecipes}){
+  const mob=useMobile();
+  const[open,setOpen]=useState(false);
+  const[saving,setSaving]=useState(false);
+  const[saved,setSaved]=useState(false);
+  const difCol=p.dificultad==="Fácil"?G.green:p.dificultad==="Media"?G.gold:G.red;
+
+  const guardar=()=>{
+    setSaving(true);
+    const recipe={
+      id:gid(),name:p.nombre,category:"Entradas",portions:2,photo:null,origin:"",
+      plating:p.descripcion,cutlery:[],colls:[],links:[],
+      steps:[{id:gid(),name:p.curso,method:p.pasos.join("\n\n")+"\n\nTruco: "+p.truco+"\n\nSi algo sale mal: "+p.planB,
+        ingredients:p.ingredientes.map(i=>({id:gid(),name:i.nombre,quantity:1,unit:i.cantidad,yieldPct:100}))}]
+    };
+    onAddRecipe&&onAddRecipe(recipe);
+    setSaving(false);setSaved(true);
+  };
+
+  return(
+    <div style={{borderBottom:`1px solid ${G.brd}`,padding:"16px 0"}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left",display:"flex",gap:mob?12:24,alignItems:"flex-start",flexDirection:mob?"column":"row"}}>
+        <p style={{fontFamily:FM,fontSize:10,letterSpacing:1.8,textTransform:"uppercase",color:G.blue,fontWeight:500,margin:0,width:mob?"auto":150,flexShrink:0,paddingTop:4}}>{p.curso}</p>
+        <div style={{flex:1}}>
+          <p style={{fontFamily:FH,fontSize:mob?18:21,color:G.text,margin:"0 0 4px",fontWeight:700,lineHeight:1.2}}>{p.nombre}</p>
+          <p style={{fontFamily:FB,fontSize:13,color:G.textMid,margin:"0 0 6px",lineHeight:1.6}}>{p.descripcion}</p>
+          <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:0}}>
+            <span style={{color:difCol,fontWeight:600}}>{p.dificultad}</span> · {p.minutos} min · {p.ingredientes.filter(i=>i.tienes).length} de {p.ingredientes.length} ingredientes ya los tienes
+          </p>
+        </div>
+        <span style={{color:G.textMut,fontSize:13,flexShrink:0,paddingTop:6,transform:open?"rotate(180deg)":"none",transition:"transform .2s"}}>▾</span>
+      </button>
+      {open&&(
+        <div style={{marginTop:16,marginLeft:mob?0:174,display:"flex",flexDirection:"column",gap:16}}>
+          <p style={{fontFamily:FB,fontSize:12.5,color:G.textMid,margin:0,lineHeight:1.7,paddingLeft:12,borderLeft:`2px solid ${G.blue}`}}>{p.porque}</p>
+          <div style={{display:"flex",gap:32,flexWrap:"wrap"}}>
+            <div style={{flex:"0 1 240px"}}>
+              <p style={{fontFamily:FM,fontSize:9,letterSpacing:1.8,textTransform:"uppercase",color:G.textMut,fontWeight:500,margin:"0 0 7px"}}>Ingredientes</p>
+              {p.ingredientes.map((i,k)=>(
+                <p key={k} style={{fontFamily:FB,fontSize:12.5,color:i.tienes?G.textMid:G.text,margin:"0 0 4px"}}>
+                  <span style={{color:i.tienes?G.green:G.gold,fontWeight:600}}>{i.tienes?"✓":"□"}</span> {i.nombre} · <span style={{color:G.textMut}}>{i.cantidad}</span>
+                </p>
+              ))}
+            </div>
+            <div style={{flex:"1 1 300px"}}>
+              <p style={{fontFamily:FM,fontSize:9,letterSpacing:1.8,textTransform:"uppercase",color:G.textMut,fontWeight:500,margin:"0 0 7px"}}>Cómo se hace</p>
+              {p.pasos.map((s,k)=><p key={k} style={{fontFamily:FB,fontSize:12.5,color:G.textMid,margin:"0 0 7px",lineHeight:1.65}}><span style={{fontFamily:FM,fontSize:10,color:G.blue}}>{k+1}</span> &nbsp;{s}</p>)}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:24,flexWrap:"wrap"}}>
+            <p style={{flex:"1 1 260px",fontFamily:FB,fontSize:12.5,color:G.textMid,margin:0,lineHeight:1.65}}><span style={{fontFamily:FM,fontSize:9,letterSpacing:1.8,textTransform:"uppercase",color:G.blue}}>El truco</span><br/>{p.truco}</p>
+            <p style={{flex:"1 1 260px",fontFamily:FB,fontSize:12.5,color:G.textMid,margin:0,lineHeight:1.65}}><span style={{fontFamily:FM,fontSize:9,letterSpacing:1.8,textTransform:"uppercase",color:G.gold}}>Si algo sale mal</span><br/>{p.planB}</p>
+          </div>
+          <div>
+            {!saved
+              ?<button onClick={guardar} disabled={saving} style={bv("ghost",{fontSize:11.5,padding:"7px 14px",borderRadius:6,display:"inline-flex",alignItems:"center",gap:6})}
+                 onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}><Icon name="plus" size={13}/>Guardar en mis recetas</button>
+              :<span style={{fontFamily:FB,fontSize:11.5,color:G.green,fontWeight:600}}>✓ Guardada · <button onClick={()=>onOpenRecipes&&onOpenRecipes()} style={{background:"none",border:"none",color:G.blue,cursor:"pointer",fontFamily:FB,fontSize:11.5,fontWeight:600,padding:0,textDecoration:"underline"}}>ver en Recetas →</button></span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══ ESCÁNER POR FOTO — abre el bar o la refrigeradora, tómale una foto ══ */
+const fileToImage=(file,maxSide=1100)=>new Promise((resolve,reject)=>{
+  const rd=new FileReader();
+  rd.onerror=()=>reject(new Error("No se pudo leer la imagen"));
+  rd.onload=()=>{
+    const img=new Image();
+    img.onerror=()=>reject(new Error("Formato de imagen no soportado"));
+    img.onload=()=>{
+      const s=Math.min(1,maxSide/Math.max(img.width,img.height));
+      const c=document.createElement("canvas");
+      c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      resolve(c.toDataURL("image/jpeg",.82).split(",")[1]);
+    };
+    img.src=rd.result;
+  };
+  rd.readAsDataURL(file);
+});
+
+const SCAN_SCHEMA={
+  type:"object",
+  properties:{items:{type:"array",items:{type:"object",properties:{
+    nombre:{type:"string"},detalle:{type:"string"},seguridad:{type:"string",enum:["alta","media","baja"]}
+  },required:["nombre","detalle","seguridad"],additionalProperties:false}},
+  nota:{type:"string"}},
+  required:["items","nota"],additionalProperties:false
+};
+
+const SCAN_BRIEF={
+  bar:{titulo:"Escanea tu bar",
+    hint:"Fotografía las botellas: de frente, con las etiquetas visibles. Puedes subir varias fotos.",
+    prompt:"Estas fotos son del bar de una casa. Identifica cada botella, lata o insumo de coctelería que veas. Lee las etiquetas: si distingues la marca, ponla en 'detalle' junto al tipo (por ejemplo detalle 'Pisco Portón, acholado, botella casi llena'). En 'nombre' usa la categoría genérica y corta con la que se pide en una receta (Pisco, Gin, Ron, Vermut, Tónica, Angostura, Tinto, Espumante…), sin marca. Estima el nivel que queda si se ve. No inventes: si una botella no se distingue, márcala con seguridad 'baja' y di en detalle qué se alcanza a ver. En 'nota' menciona qué te falta ver o qué conviene volver a fotografiar."},
+  despensa:{titulo:"Escanea tu despensa",
+    hint:"Fotografía la refrigeradora abierta o la repisa. Puedes subir varias fotos.",
+    prompt:"Estas fotos son de la despensa o refrigeradora de una casa. Identifica cada ingrediente que veas. En 'nombre' usa el nombre genérico y corto con el que se pide en una receta (Cebolla, Parmesano, Crema de leche, Huevos…), sin marca. En 'detalle' anota marca, cantidad aproximada y estado si se aprecia (por ejemplo 'medio paquete', 'muy maduro, úsalo hoy'). No inventes: lo que no se distinga va con seguridad 'baja'. En 'nota' señala lo que veas próximo a vencerse o lo que convenga usar primero."}
+};
+
+function FotoInventario({campo,yaTengo,onAgregar}){
+  const mob=useMobile();
+  const[fotos,setFotos]=useState([]);
+  const[loading,setLoading]=useState(false);
+  const[error,setError]=useState("");
+  const[hallazgos,setHallazgos]=useState(null);
+  const[nota,setNota]=useState("");
+  const[elegidos,setElegidos]=useState([]);
+  const inputRef=useRef(null);
+  const B=SCAN_BRIEF[campo];
+
+  const cargar=async list=>{
+    const files=[...list].slice(0,4);
+    if(!files.length)return;
+    setError("");
+    try{
+      const b64=await Promise.all(files.map(f=>fileToImage(f)));
+      setFotos(p=>[...p,...b64].slice(0,4));
+    }catch(e){setError(e.message);}
+  };
+
+  const escanear=async()=>{
+    if(!fotos.length){setError("Sube al menos una foto");return;}
+    setLoading(true);setError("");setHallazgos(null);
+    const ctrl=new AbortController();
+    const t=setTimeout(()=>ctrl.abort(),58000);
+    try{
+      const content=[
+        ...fotos.map(data=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data}})),
+        {type:"text",text:B.prompt+(yaTengo.length?`\n\nYa están registrados (no los repitas): ${yaTengo.join(", ")}.`:"")}
+      ];
+      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),signal:ctrl.signal,
+        body:JSON.stringify({model:"claude-opus-5",max_tokens:4000,
+          output_config:{effort:"low",format:{type:"json_schema",schema:SCAN_SCHEMA}},
+          system:"Eres un chef que hace inventario mirando. Identificas con precisión y nunca inventas lo que no se ve. Respondes únicamente con el JSON del esquema.",
+          messages:[{role:"user",content}]})});
+      const data=await res.json();
+      if(!res.ok)throw new Error(data?.error?.message||"Error de la API");
+      const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+      const m=txt.match(/\{[\s\S]*\}/);
+      const out=JSON.parse(m?m[0]:txt);
+      const items=(out.items||[]).filter(i=>!yaTengo.includes(i.nombre));
+      setHallazgos(items);setNota(out.nota||"");
+      setElegidos(items.filter(i=>i.seguridad!=="baja").map(i=>i.nombre));
+    }catch(e){
+      setError(e.name==="AbortError"?"El escaneo se demoró demasiado. Intenta con menos fotos.":"No se pudo leer la foto: "+e.message);
+    }
+    clearTimeout(t);setLoading(false);
+  };
+
+  const togglePick=n=>setElegidos(p=>p.includes(n)?p.filter(x=>x!==n):[...p,n]);
+  const confirmar=()=>{
+    onAgregar([...new Set(elegidos)]);
+    setHallazgos(null);setFotos([]);setElegidos([]);setNota("");
+  };
+  const segCol=s=>s==="alta"?G.green:s==="media"?G.gold:G.textMut;
+
+  return(
+    <div style={{border:`1px dashed ${G.brdL}`,borderRadius:10,padding:"16px 18px",marginBottom:18,background:G.card}}>
+      <div style={{display:"flex",gap:12,alignItems:"baseline",flexWrap:"wrap",marginBottom:10}}>
+        <p style={{fontFamily:FM,fontSize:9.5,letterSpacing:2.2,textTransform:"uppercase",color:G.blue,fontWeight:500,margin:0}}>{B.titulo}</p>
+        <span style={{fontFamily:FB,fontSize:11.5,color:G.textMut}}>{B.hint}</span>
+      </div>
+
+      <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+        <input ref={inputRef} type="file" accept="image/*" multiple capture="environment" style={{display:"none"}}
+          onChange={e=>{cargar(e.target.files);e.target.value="";}}/>
+        <button onClick={()=>inputRef.current&&inputRef.current.click()} style={bv("ghost",{fontSize:12,padding:"8px 14px",borderRadius:7,display:"inline-flex",alignItems:"center",gap:7})}
+          onMouseOver={e=>e.currentTarget.style.background=G.surf} onMouseOut={e=>e.currentTarget.style.background=G.w}>
+          <Icon name="camera" size={14}/>{mob?"Tomar foto":"Subir fotos"}
+        </button>
+        {fotos.length>0&&<button onClick={escanear} disabled={loading} style={bv("p",{fontSize:12,padding:"8px 16px",borderRadius:7,opacity:loading?.6:1,cursor:loading?"wait":"pointer"})}
+          onMouseOver={e=>{if(!loading)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+          {loading?"Mirando…":`✦ Leer ${fotos.length===1?"la foto":`las ${fotos.length} fotos`}`}
+        </button>}
+        {fotos.length>0&&!loading&&<button onClick={()=>{setFotos([]);setHallazgos(null);}} style={{background:"none",border:"none",color:G.textMut,cursor:"pointer",fontFamily:FB,fontSize:11.5}}>Quitar</button>}
+        {error&&<span style={{fontFamily:FB,fontSize:11.5,color:G.red}}>{error}</span>}
+      </div>
+
+      {fotos.length>0&&(
+        <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
+          {fotos.map((f,i)=>(
+            <div key={i} style={{position:"relative"}}>
+              <img src={`data:image/jpeg;base64,${f}`} alt="" style={{width:64,height:64,objectFit:"cover",borderRadius:6,border:`1px solid ${G.brd}`}}/>
+              <button onClick={()=>setFotos(p=>p.filter((_,k)=>k!==i))} style={{position:"absolute",top:-6,right:-6,width:18,height:18,borderRadius:9,border:`1px solid ${G.brd}`,background:G.w,color:G.textMut,cursor:"pointer",fontSize:10,lineHeight:1,padding:0}}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {hallazgos&&(
+        <div style={{marginTop:16,paddingTop:14,borderTop:`1px solid ${G.brd}`}}>
+          {hallazgos.length===0
+            ?<p style={{fontFamily:FB,fontSize:12.5,color:G.textMut,margin:0}}>No reconocí nada nuevo. Prueba con más luz o etiquetas al frente.</p>
+            :<>
+              <p style={{fontFamily:FB,fontSize:11.5,color:G.textMut,margin:"0 0 10px"}}>Encontré {hallazgos.length}. Desmarca lo que no corresponda.</p>
+              <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:14}}>
+                {hallazgos.map((h,i)=>{
+                  const on=elegidos.includes(h.nombre);
+                  return(
+                    <button key={i} onClick={()=>togglePick(h.nombre)} style={{display:"flex",gap:9,alignItems:"baseline",textAlign:"left",background:"none",border:"none",padding:"3px 0",cursor:"pointer",width:"100%"}}>
+                      <span style={{color:on?G.blue:G.textMut,fontSize:13,flexShrink:0}}>{on?"✓":"○"}</span>
+                      <span style={{fontFamily:FB,fontSize:13,color:on?G.text:G.textMut,fontWeight:on?600:400,flexShrink:0}}>{h.nombre}</span>
+                      <span style={{fontFamily:FB,fontSize:11.5,color:G.textMut,flex:1}}>{h.detalle}</span>
+                      <span style={{fontFamily:FM,fontSize:8.5,letterSpacing:1.4,textTransform:"uppercase",color:segCol(h.seguridad),flexShrink:0}}>{h.seguridad}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {nota&&<p style={{fontFamily:FB,fontSize:11.5,color:G.textMut,fontStyle:"italic",margin:"0 0 12px",lineHeight:1.6}}>{nota}</p>}
+              <button onClick={confirmar} disabled={!elegidos.length} style={bv("p",{fontSize:12,padding:"8px 16px",borderRadius:7,opacity:elegidos.length?1:.5})}
+                onMouseOver={e=>{if(elegidos.length)e.currentTarget.style.background=G.blueHov;}} onMouseOut={e=>e.currentTarget.style.background=G.blue}>
+                Agregar {elegidos.length} a mi {campo==="bar"?"bar":"despensa"}
+              </button>
+            </>}
         </div>
       )}
     </div>
