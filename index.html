@@ -2975,6 +2975,30 @@ function DishCard({dish,index,onAddRecipe,onOpenRecipes}){
   );
 }
 
+/* Pide JSON al modelo. Primero con structured outputs; si el endpoint no acepta
+   output_config, reintenta una vez pidiendo el JSON por prompt con el mismo esquema. */
+const askJSON=async({max_tokens,system,content,schema,signal})=>{
+  const base={model:"claude-opus-5",max_tokens,system,messages:[{role:"user",content}]};
+  const call=body=>fetch(AI_URL,{method:"POST",headers:AHEADERS(),signal,body:JSON.stringify(body)});
+  const leer=data=>{
+    const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    const m=txt.match(/\{[\s\S]*\}/);
+    return JSON.parse(m?m[0]:txt);
+  };
+  let res=await call({...base,output_config:{effort:"low",format:{type:"json_schema",schema}}});
+  let data=await res.json();
+  if(res.ok)return leer(data);
+  const msg=data?.error?.message||"";
+  if(!/output_config|json_schema|effort|format/i.test(msg))throw new Error(msg||"Error de la API");
+  const conEsquema=Array.isArray(content)
+    ?[...content,{type:"text",text:"Responde ÚNICAMENTE con JSON válido que cumpla este esquema, sin backticks ni texto extra:\n"+JSON.stringify(schema)}]
+    :content+"\n\nResponde ÚNICAMENTE con JSON válido que cumpla este esquema, sin backticks ni texto extra:\n"+JSON.stringify(schema);
+  res=await call({...base,messages:[{role:"user",content:conEsquema}]});
+  data=await res.json();
+  if(!res.ok)throw new Error(data?.error?.message||"Error de la API");
+  return leer(data);
+};
+
 /* ══════════════════════════════════════════════════════════════════
    CHEF PRIVADO — de la ocasión + lo que tienes a una velada completa
    ══════════════════════════════════════════════════════════════════ */
@@ -3174,16 +3198,9 @@ function ChefPrivado({onAddRecipe,onOpenRecipes}){
       "· Todo en español neutro, tuteando. Sin emojis. Concreto, cálido, sin relleno."
     ].filter(Boolean).join("\n");
     try{
-      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),signal:ctrl.signal,
-        body:JSON.stringify({model:"claude-opus-5",max_tokens:8000,
-          output_config:{effort:"low",format:{type:"json_schema",schema:VELADA_SCHEMA}},
-          system:"Eres el chef privado de esta casa: cocinas con técnica de restaurante y piensas como anfitrión de hotelería de lujo. Tu trabajo no es proponer platos bonitos, es que la noche salga bien: lees la ocasión, proteges al que cocina de su propio nivel y diseñas un servicio que se pueda ejecutar sin pánico. Responde únicamente con el JSON del esquema.",
-          messages:[{role:"user",content:brief}]})});
-      const data=await res.json();
-      if(!res.ok)throw new Error(data?.error?.message||"Error de la API");
-      const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-      const m=txt.match(/\{[\s\S]*\}/);
-      setVelada(JSON.parse(m?m[0]:txt));
+      setVelada(await askJSON({max_tokens:8000,schema:VELADA_SCHEMA,signal:ctrl.signal,
+        system:"Eres el chef privado de esta casa: cocinas con técnica de restaurante y piensas como anfitrión de hotelería de lujo. Tu trabajo no es proponer platos bonitos, es que la noche salga bien: lees la ocasión, proteges al que cocina de su propio nivel y diseñas un servicio que se pueda ejecutar sin pánico. Responde únicamente con el JSON del esquema.",
+        content:brief}));
     }catch(e){
       setError(e.name==="AbortError"?"La cocina se demoró demasiado. Vuelve a intentar — suele salir a la segunda.":"No se pudo diseñar la velada: "+e.message);
     }
@@ -3492,16 +3509,9 @@ function FotoInventario({campo,yaTengo,onAgregar}){
         ...fotos.map(data=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data}})),
         {type:"text",text:B.prompt+(yaTengo.length?`\n\nYa están registrados (no los repitas): ${yaTengo.join(", ")}.`:"")}
       ];
-      const res=await fetch(AI_URL,{method:"POST",headers:AHEADERS(),signal:ctrl.signal,
-        body:JSON.stringify({model:"claude-opus-5",max_tokens:4000,
-          output_config:{effort:"low",format:{type:"json_schema",schema:SCAN_SCHEMA}},
-          system:"Eres un chef que hace inventario mirando. Identificas con precisión y nunca inventas lo que no se ve. Respondes únicamente con el JSON del esquema.",
-          messages:[{role:"user",content}]})});
-      const data=await res.json();
-      if(!res.ok)throw new Error(data?.error?.message||"Error de la API");
-      const txt=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-      const m=txt.match(/\{[\s\S]*\}/);
-      const out=JSON.parse(m?m[0]:txt);
+      const out=await askJSON({max_tokens:4000,schema:SCAN_SCHEMA,signal:ctrl.signal,
+        system:"Eres un chef que hace inventario mirando. Identificas con precisión y nunca inventas lo que no se ve. Respondes únicamente con el JSON del esquema.",
+        content});
       const items=(out.items||[]).filter(i=>!yaTengo.includes(i.nombre));
       setHallazgos(items);setNota(out.nota||"");
       setElegidos(items.filter(i=>i.seguridad!=="baja").map(i=>i.nombre));
