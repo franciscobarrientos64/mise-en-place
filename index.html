@@ -929,7 +929,7 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
         </div>
       </div>
       <div style={{display:"flex",borderBottom:`1px solid ${G.brd}`,marginBottom:28}}>
-        {[["recipe","Receta"],["costing","Costeo"],["nutrition","Nutrición"]].map(([id,label])=>(
+        {[["recipe","Receta"],["costing","Costeo"],["nutrition","Nutrición"],["thermomix","Thermomix"]].map(([id,label])=>(
           <button key={id} onClick={()=>setTab(id)} style={{background:"none",border:"none",cursor:"pointer",fontFamily:FB,fontSize:12,fontWeight:600,padding:"10px 20px",color:tab===id?G.blue:G.textMut,borderBottom:tab===id?`2px solid ${G.blue}`:"2px solid transparent",transition:"all .15s",marginBottom:-1}}>
             {label}
           </button>
@@ -951,6 +951,7 @@ function Detail({recipe,tab,setTab,country,setCountry,co,getP,setP,onDelete,coll
         </button>
       </div>
       {tab==="recipe"&&<RecipeTab recipe={recipe} onUpdate={onUpdate}/>}
+      {tab==="thermomix"&&<ThermomixTab recipe={recipe} onUpdate={onUpdate}/>}
       {tab==="costing"&&<CosteoTab recipe={recipe} country={country} setCountry={setCountry} co={co} getP={getP} setP={setP}/>}
     </div>
   );
@@ -1080,6 +1081,220 @@ Si no hay cantidad específica usa 1. Unidades válidas: g, kg, ml, l, tsp, tbsp
   );
 }
 
+
+/* ══ THERMOMIX TAB — adapta la receta a la TM7 y la envía a Cookidoo (Recetas creadas) ══ */
+const COOKIDOO_HOST="https://cookidoo.international";
+const TM7_SCHEMA={
+  type:"object",
+  properties:{
+    apto:{type:"string",enum:["alto","medio","bajo"]},
+    veredicto:{type:"string"},
+    porciones:{type:"integer"},
+    prepMin:{type:"integer"},
+    totalMin:{type:"integer"},
+    ingredientes:{type:"array",items:{type:"string"}},
+    pasos:{type:"array",items:{type:"object",properties:{
+      texto:{type:"string"},
+      ingredientes:{type:"array",items:{type:"string"}},
+      ajuste:{anyOf:[{type:"null"},{type:"object",properties:{
+        fragmento:{type:"string"},
+        tipo:{type:"string",enum:["normal","vapor","dorado","amasar","turbo"]},
+        segundos:{type:"integer"},
+        temperatura:{type:["integer","null"]},
+        velocidad:{type:["string","null"]},
+        inverso:{type:"boolean"},
+        potencia:{type:["string","null"],enum:["suave","intensa",null]}
+      },required:["fragmento","tipo","segundos","temperatura","velocidad","inverso","potencia"],additionalProperties:false}]}
+    },required:["texto","ingredientes","ajuste"],additionalProperties:false}}
+  },
+  required:["apto","veredicto","porciones","prepMin","totalMin","ingredientes","pasos"],
+  additionalProperties:false
+};
+
+const TM7_SYSTEM=`Eres desarrollador de recetas oficiales de Thermomix TM7 en español. Reescribes recetas de cocina profesional al formato de cocción guiada de Cookidoo.
+Formato Thermomix (respétalo al pie de la letra):
+· Los ajustes van en notación Thermomix dentro del texto: "5 seg/vel 5", "3 min/100°C/vel 1", "8 min/120°C/giro inverso/vel cuchara", "20 min/Varoma/vel 1".
+· Un paso = una acción de la máquina como máximo. Pesar ingredientes y programar la máquina en pasos separados cuando haga falta.
+· Los pasos sin la máquina (soplete, horno, nevera, emplatado, cortar a cuchillo un corte que la TM7 no hace bien) se mantienen como pasos manuales con ajuste null.
+· Vaso de 2,2 L: no lo llenes por encima de la marca. Si la cantidad no cabe, divide en tandas y dilo.
+· Calentando con cuchillas, máximo 120 °C. Para sellar o dorar usa el modo dorado ("modo dorado intenso 5 min/160°C"). Para masas usa el modo amasar ("modo amasar 2 min"). Para cocer al vapor usa el Varoma ("20 min/Varoma/vel 1"). Para alimentos delicados que no se deben triturar usa giro inverso y velocidad cuchara o 1.
+· Escribe los ingredientes de la lista con cantidad delante: "600 g de lenguado fresco", "2 dientes de ajo". En el paso donde se añade, copia el texto del ingrediente EXACTAMENTE igual a como aparece en la lista (misma cadena, carácter por carácter) y ponlo también en el array ingredientes del paso.
+Campos de ajuste (son los únicos ajustes que Cookidoo programa en la TM7):
+· fragmento: el texto exacto del ajuste tal como aparece dentro de texto (por ejemplo "5 seg/vel 5"). Debe ser una subcadena literal de texto.
+· tipo "normal": tiempo + velocidad, con temperatura opcional. Temperaturas válidas: 37, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 98, 100, 105, 110, 115, 120. Velocidades: "cuchara", "0.5" a "10" en pasos de 0.5. Máximo 99 min.
+· tipo "vapor": cocción al Varoma; tiempo + velocidad ("cuchara" a "5"). temperatura null.
+· tipo "dorado": modo dorado para sellar o dorar; tiempo hasta 30 min, temperatura 140 a 160 (múltiplo de 5), potencia "suave" o "intensa". velocidad null.
+· tipo "amasar": modo amasar; tiempo hasta 20 min. temperatura y velocidad null.
+· tipo "turbo": golpes de turbo de 0.5 a 2 seg; temperatura y velocidad null.
+· segundos: duración en segundos. inverso: true si va con giro inverso (solo normal y vapor). potencia: solo en dorado; null en los demás.
+· No uses tapa abierta ni otros modos como ajuste: si un paso los necesita, descríbelos en el texto y deja ajuste null.
+Valora con honestidad: apto "alto" si la TM7 hace la mayor parte del trabajo, "medio" si ayuda en algunos pasos, "bajo" si casi todo queda fuera de la máquina. El veredicto explica en una o dos frases qué gana el plato con la TM7 y qué no conviene hacer en ella.`;
+
+const tm7Prompt=(recipe,indicaciones)=>{
+  const pasos=(recipe.steps||[]).map((s,i)=>{
+    const ings=(s.ingredients||[]).map(x=>`${x.quantity} ${x.unit} ${x.name}`).join("; ");
+    return `Paso ${i+1} — ${s.name}\nIngredientes: ${ings||"(sin ingredientes)"}\nMétodo: ${s.method||""}${s.notes?`\nNotas del chef: ${s.notes}`:""}`;
+  }).join("\n\n");
+  return [`RECETA: ${recipe.name}`,`PORCIONES: ${recipe.portions||1}`,`CATEGORÍA: ${recipe.category||""}`,
+    recipe.plating?`EMPLATADO: ${recipe.plating}`:"","",pasos,"",
+    indicaciones?`INDICACIONES DEL COCINERO PARA ESTA VERSIÓN: ${indicaciones}`:"",
+    "Adapta esta receta a la Thermomix TM7 para cocción guiada en Cookidoo. Conserva la técnica y el resultado del plato; termina con el emplatado como último paso manual."
+  ].filter(x=>x!=="").join("\n");
+};
+
+/* Convierte la versión TM7 al cuerpo que acepta Cookidoo en Recetas creadas.
+   Formato verificado contra el editor de Cookidoo (oct 2026): TTS con speed/direction/
+   time/temperature, y MODE steaming|browning|dough|turbo. Las anotaciones se posicionan
+   buscando el fragmento en el texto; si el modelo no lo copió literal, el paso sube sin ajuste. */
+const TM_TEMPS=[37,40,45,50,55,60,65,70,75,80,85,90,95,98,100,105,110,115,120];
+const near=(v,list)=>list.reduce((a,b)=>Math.abs(b-v)<Math.abs(a-v)?b:a);
+const tmSpeed=v=>{if(!v||/cuchara|soft/i.test(v))return "soft";const n=Math.min(10,Math.max(0.5,Math.round(parseFloat(v)*2)/2));return isNaN(n)?"soft":String(n);};
+const tmTime=(s,max)=>Math.min(max,Math.max(1,Math.round(s||1)));
+const tm7Annotation=a=>{
+  const dir=a.inverso?"CCW":"CW";
+  if(a.tipo==="vapor")return{type:"MODE",name:"steaming",data:{speed:tmSpeed(a.velocidad),direction:dir,time:tmTime(a.segundos,5940),accessory:"Varoma"}};
+  if(a.tipo==="dorado")return{type:"MODE",name:"browning",data:{time:tmTime(a.segundos,1800),temperature:{value:String(near(a.temperatura||160,[140,145,150,155,160])),unit:"C"},power:a.potencia==="intensa"?"Intense":"Gentle"}};
+  if(a.tipo==="amasar")return{type:"MODE",name:"dough",data:{time:tmTime(a.segundos,1200)}};
+  if(a.tipo==="turbo")return{type:"MODE",name:"turbo",data:{time:Math.min(2,Math.max(0.5,a.segundos||1))}};
+  const data={speed:tmSpeed(a.velocidad),time:tmTime(a.segundos,5940)};
+  if(a.inverso)data.direction="CCW";
+  if(a.temperatura)data.temperature={value:String(near(a.temperatura,TM_TEMPS)),unit:"C"};
+  return{type:"TTS",data};
+};
+const tm7ToCookidoo=(tm7,name)=>{
+  const instructions=tm7.pasos.map(p=>{
+    const annotations=[];
+    (p.ingredientes||[]).forEach(ing=>{
+      const offset=p.texto.indexOf(ing);
+      if(offset>=0)annotations.push({type:"INGREDIENT",data:{description:ing},position:{offset,length:ing.length}});
+    });
+    const a=p.ajuste;
+    if(a&&a.fragmento){
+      const offset=p.texto.indexOf(a.fragmento);
+      if(offset>=0)annotations.push({...tm7Annotation(a),position:{offset,length:a.fragmento.length}});
+    }
+    annotations.sort((x,y)=>x.position.offset-y.position.offset);
+    return{type:"STEP",text:p.texto,annotations};
+  });
+  return{
+    name,
+    patch:{
+      ingredients:tm7.ingredientes.map(text=>({type:"INGREDIENT",text})),
+      instructions,
+      tools:["TM7"],
+      prepTime:(tm7.prepMin||0)*60,
+      totalTime:(tm7.totalMin||0)*60,
+      yield:{value:tm7.porciones||1,unitText:"portion"}
+    }
+  };
+};
+
+/* Marcador que se arrastra a la barra: en cookidoo.international crea la receta
+   y la rellena con tu sesión. Lee la receta del #mep=… de la URL o del portapapeles. */
+const COOKIDOO_BOOKMARKLET="javascript:"+encodeURIComponent(`(async()=>{try{let d=null;const h=location.hash.match(/mep=([^&]+)/);if(h)d=JSON.parse(decodeURIComponent(h[1]));if(!d){try{d=JSON.parse(await navigator.clipboard.readText())}catch(e){}}if(!d||!d.patch){alert('No encuentro ninguna receta de mise-en-place. Vuelve a pulsar Enviar a Cookidoo.');return}const m=location.pathname.match(/^\\/(?:created-recipes|recipes|search|foundation|profile)\\/([a-zA-Z-]+)/);const loc=(m&&m[1])||d.locale||'en';const base=location.origin+'/created-recipes/'+loc;const H={'Content-Type':'application/json',Accept:'application/json'};let r=await fetch(base,{method:'POST',headers:H,credentials:'include',body:JSON.stringify({recipeName:d.name})});if(!r.ok)throw Error('al crear ('+r.status+')');const j=await r.json();const id=j.recipeId||j.id;if(!id)throw Error('Cookidoo no devolvió el id');r=await fetch(base+'/'+id,{method:'PATCH',headers:H,credentials:'include',body:JSON.stringify(d.patch)});if(!r.ok)throw Error('al rellenar ('+r.status+'): '+(await r.text()).slice(0,200));history.replaceState(null,'',location.pathname);location.href=base+'/'+id}catch(e){alert('No se pudo subir a Cookidoo '+e.message)}})()`);
+
+function ThermomixTab({recipe,onUpdate}){
+  const mob=useMobile();
+  const[loading,setLoading]=useState(false);
+  const[error,setError]=useState("");
+  const[indic,setIndic]=useState("");
+  const[sent,setSent]=useState(false);
+  const[loc,setLoc]=useState(()=>{try{return localStorage.getItem("mep_cookidoo_locale")||"en";}catch(e){return "en";}});
+  useEffect(()=>{try{localStorage.setItem("mep_cookidoo_locale",loc);}catch(e){}},[loc]);
+  const tm7=recipe.tm7||null;
+
+  const convertir=async()=>{
+    setLoading(true);setError("");setSent(false);
+    const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),90000);
+    try{
+      const out=await askJSON({max_tokens:6000,schema:TM7_SCHEMA,signal:ctrl.signal,system:TM7_SYSTEM,content:tm7Prompt(recipe,indic.trim())});
+      onUpdate&&onUpdate({...recipe,tm7:{...out,generado:new Date().toISOString()}});
+    }catch(e){
+      setError(e.name==="AbortError"?"La conversión se demoró demasiado. Vuelve a intentar.":"No se pudo adaptar la receta: "+e.message);
+    }
+    clearTimeout(t);setLoading(false);
+  };
+
+  const enviar=async()=>{
+    const d={...tm7ToCookidoo(tm7,recipe.name),locale:loc};
+    const json=JSON.stringify(d);
+    try{await navigator.clipboard.writeText(json);}catch(e){}
+    window.open(`${COOKIDOO_HOST}/created-recipes/${loc}#mep=${encodeURIComponent(json)}`,"_blank","noopener");
+    setSent(true);
+  };
+
+  const sinAnclar=tm7?tm7.pasos.filter(p=>p.ajuste&&p.texto.indexOf(p.ajuste.fragmento)<0).length:0;
+  const eyebrow={fontFamily:FM,fontSize:9.5,letterSpacing:2.4,textTransform:"uppercase",color:G.blue,fontWeight:500,margin:"0 0 10px"};
+  const aptoColor={alto:G.green,medio:G.gold,bajo:G.red};
+  const chip=txt=><span style={{fontFamily:FM,fontSize:10.5,background:G.blueTint,color:G.blue,border:`1px solid ${G.blueLight}`,borderRadius:4,padding:"2px 7px",whiteSpace:"nowrap"}}>{txt}</span>;
+  const ajusteTxt=a=>{const t=a.segundos>=60?`${Math.round(a.segundos/60)} min`:`${a.segundos} seg`;const v=a.velocidad?(/cuchara|soft/i.test(a.velocidad)?"vel cuchara":"vel "+a.velocidad):null;
+    return({vapor:["Varoma",t,a.inverso?"inverso":null,v],dorado:["Dorado "+(a.potencia||"suave"),t,(a.temperatura||160)+"°C"],amasar:["Amasar",t],turbo:["Turbo",t]}[a.tipo]||[t,a.temperatura?a.temperatura+"°C":null,a.inverso?"inverso":null,v]).filter(Boolean).join(" · ");};
+
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:18}}>
+      <div style={{border:`1px solid ${G.brd}`,borderRadius:10,background:G.w,padding:mob?"16px":"20px 24px"}}>
+        <p style={eyebrow}>Thermomix TM7 · Cookidoo</p>
+        <p style={{fontFamily:FB,fontSize:12.5,color:G.textMid,lineHeight:1.7,margin:"0 0 14px"}}>
+          Adapta la receta a cocción guiada (tiempo, temperatura y velocidad en cada paso) y súbela a tus Recetas creadas de Cookidoo con un clic.
+        </p>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <input value={indic} onChange={e=>setIndic(e.target.value)} placeholder="Indicaciones opcionales: para 8 porciones, sin Varoma, más picante…" style={inp({flex:"1 1 260px",fontSize:12})}/>
+          <button onClick={convertir} disabled={loading||!onUpdate} style={{...bv("p",{fontSize:12,opacity:loading?.6:1}),display:"inline-flex",alignItems:"center",gap:6}}>
+            <Icon name="sparkle" size={14}/>{loading?"Adaptando…":tm7?"Volver a adaptar":"Adaptar a TM7"}
+          </button>
+        </div>
+        {error&&<p style={{fontFamily:FB,fontSize:12,color:G.red,margin:"10px 0 0"}}>{error}</p>}
+      </div>
+
+      {tm7&&<>
+        <div style={{display:"flex",gap:12,alignItems:"flex-start",border:`1px solid ${G.brd}`,borderRadius:10,background:G.card,padding:"14px 18px"}}>
+          <span style={{fontFamily:FM,fontSize:10,letterSpacing:1.5,textTransform:"uppercase",color:G.w,background:aptoColor[tm7.apto]||G.textMut,borderRadius:4,padding:"3px 8px",flexShrink:0}}>Apto {tm7.apto}</span>
+          <p style={{fontFamily:FB,fontSize:12.5,color:G.textMid,lineHeight:1.7,margin:0}}>{tm7.veredicto}</p>
+        </div>
+
+        <div style={{display:"flex",gap:24,flexWrap:"wrap"}}>
+          <div style={{flex:"0 0 260px",minWidth:200}}>
+            <p style={eyebrow}>Ingredientes · {tm7.porciones} porc. · {tm7.totalMin} min</p>
+            {tm7.ingredientes.map((x,i)=><p key={i} style={{fontFamily:FB,fontSize:12,color:G.text,margin:0,padding:"6px 0",borderBottom:`1px solid ${G.brd}`}}>{x}</p>)}
+          </div>
+          <div style={{flex:1,minWidth:240}}>
+            <p style={eyebrow}>Preparación guiada</p>
+            {tm7.pasos.map((p,i)=>(
+              <div key={i} style={{display:"flex",gap:12,padding:"10px 0",borderBottom:`1px solid ${G.brd}`}}>
+                <span style={{fontFamily:FM,fontSize:11,color:G.textMut,width:18,flexShrink:0,paddingTop:2}}>{i+1}</span>
+                <div style={{flex:1}}>
+                  <p style={{fontFamily:FB,fontSize:12.5,color:G.textMid,lineHeight:1.7,margin:0}}>{p.texto}</p>
+                  {p.ajuste?<div style={{marginTop:6}}>{chip(ajusteTxt(p.ajuste))}</div>
+                    :<p style={{fontFamily:FM,fontSize:9.5,letterSpacing:1.2,textTransform:"uppercase",color:G.textMut,margin:"6px 0 0"}}>Paso manual</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{border:`1px solid ${G.blueLight}`,borderRadius:10,background:G.blueTint,padding:mob?"16px":"18px 24px"}}>
+          <p style={eyebrow}>Enviar a Cookidoo</p>
+          <ol style={{fontFamily:FB,fontSize:12.5,color:G.textMid,lineHeight:1.9,margin:"0 0 14px",paddingLeft:18}}>
+            <li>Solo la primera vez: arrastra este botón a la barra de marcadores de Chrome → <a href={COOKIDOO_BOOKMARKLET} onClick={e=>e.preventDefault()} style={{...bv("ghost",{fontSize:11,padding:"3px 10px",borderRadius:5}),textDecoration:"none",display:"inline-block",cursor:"grab"}}>Subir a Cookidoo</a></li>
+            <li>Pulsa <b>Enviar a Cookidoo</b>: se abre Cookidoo con la receta preparada (inicia sesión si te lo pide).</li>
+            <li>En esa pestaña, pulsa el marcador <b>Subir a Cookidoo</b>. La receta aparece en Recetas creadas y llega a tu TM7.</li>
+          </ol>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            <button onClick={enviar} style={{...bv("p",{fontSize:12}),display:"inline-flex",alignItems:"center",gap:6}}><Icon name="upload" size={14}/>Enviar a Cookidoo</button>
+            <label style={{fontFamily:FM,fontSize:10,color:G.textMut,display:"inline-flex",alignItems:"center",gap:6}}>Idioma Cookidoo
+              <input value={loc} onChange={e=>setLoc(e.target.value.trim())} style={inp({width:70,padding:"5px 8px",fontSize:11})}/>
+            </label>
+            {sent&&<span style={{fontFamily:FB,fontSize:11.5,color:G.green}}>Abierto en Cookidoo. Pulsa el marcador allí. (También quedó copiada en el portapapeles.)</span>}
+          </div>
+          {sinAnclar>0&&<p style={{fontFamily:FB,fontSize:11.5,color:G.gold,margin:"10px 0 0"}}>{sinAnclar} paso(s) llevarán el ajuste solo como texto; complétalos en el editor de Cookidoo o vuelve a adaptar.</p>}
+          <p style={{fontFamily:FB,fontSize:11,color:G.textMut,margin:"10px 0 0"}}>
+            Plan B, si Cookidoo cambia: en Recetas creadas → Importar receta, pega <span style={{fontFamily:FM}}>{location.origin}/api/receta?id={recipe.id}</span>
+          </p>
+        </div>
+      </>}
+    </div>
+  );
+}
 
 /* ══ NUTRICIÓN TAB ══ */
 function NutricionTab({recipe,onUpdate}){
