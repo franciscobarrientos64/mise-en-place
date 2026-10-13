@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mise en Place</title>
+<meta name="description" content="Recetario y fichas técnicas de cocina.">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#12130F">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2312130F'/%3E%3Ccircle cx='16' cy='16' r='6' fill='none' stroke='%23A7B892' stroke-width='2.4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://images.unsplash.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12130F;
+    --ink:#ECE9E1;
+    --ink-mid:#BDB9AE;
+    --muted:#9A968A;
+    --line:#34362D;
+    --line-hi:#5B5F50;
+    --accent:#A7B892;
+    --accent-hi:#BCCBA9;
+    --error:#E39A8B;
+    --ease:cubic-bezier(.16,1,.3,1);
+    --gutter:clamp(1.5rem,5vw,4.5rem);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    min-height:100vh;min-height:100svh;
+    background:var(--bg);color:var(--ink);
+    font:400 1rem/1.6 Inter,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);
+  }
+
+  /* Foto */
+  .photo{position:relative;overflow:hidden;min-height:100svh;animation:unveil 1.3s var(--ease) both}
+  .photo img{
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 40%;
+    filter:saturate(.85) brightness(.82);
+    animation:settle 2.2s var(--ease) both;
+  }
+  .photo::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 70%,var(--bg))}
+
+  /* Contenido */
+  main{
+    display:flex;flex-direction:column;justify-content:space-between;
+    min-height:100svh;padding:var(--gutter);
+  }
+  .intro{margin-block:auto;max-width:34rem}
+  h1{
+    font:500 clamp(3.4rem,7.4vw,6rem)/.9 "Space Grotesk",Inter,sans-serif;
+    letter-spacing:-.03em;text-wrap:balance;
+  }
+  h1 span{display:inline-block;animation:rise 1s var(--ease) both}
+  h1 span:nth-child(2){animation-delay:.08s}
+  h1 span:nth-child(3){animation-delay:.16s}
+  .lede{
+    margin-top:1.75rem;max-width:30ch;
+    color:var(--ink-mid);font-size:1.125rem;line-height:1.65;text-wrap:pretty;
+    animation:fade 1s .35s var(--ease) both;
+  }
+
+  form{margin-top:clamp(2.75rem,7vh,4.5rem);animation:fade 1s .5s var(--ease) both}
+  label{display:block;font-size:.875rem;color:var(--muted);margin-bottom:.6rem}
+  .row{display:flex;align-items:stretch;gap:.75rem}
+  .field{position:relative;flex:1;min-width:0}
+  input{
+    width:100%;height:3.25rem;padding:0 4.5rem 0 0;
+    background:transparent;border:0;border-bottom:1px solid var(--line-hi);border-radius:0;
+    color:var(--ink);font:400 1.25rem/1 Inter,system-ui,sans-serif;letter-spacing:.06em;
+    caret-color:var(--accent);
+    transition:border-color .25s var(--ease);
+  }
+  input:hover{border-bottom-color:var(--muted)}
+  input:focus{outline:none;border-bottom-color:var(--accent)}
+  input:focus-visible{box-shadow:0 1px 0 0 var(--accent)}
+  .field[data-error] input{border-bottom-color:var(--error)}
+  .toggle{
+    position:absolute;right:0;top:50%;translate:0 -50%;
+    background:none;border:0;padding:.5rem 0 .5rem .75rem;cursor:pointer;
+    color:var(--muted);font:500 .8125rem/1 Inter,sans-serif;
+  }
+  .toggle:hover,.toggle:focus-visible{color:var(--ink)}
+  .toggle:focus-visible,button[type=submit]:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+  button[type=submit]{
+    flex:none;display:inline-flex;align-items:center;gap:.6rem;
+    height:3.25rem;padding:0 1.5rem;border:0;border-radius:999px;cursor:pointer;
+    background:var(--accent);color:var(--bg);
+    font:500 1rem/1 Inter,sans-serif;white-space:nowrap;
+    transition:background-color .25s var(--ease),opacity .25s;
+  }
+  button[type=submit]:hover{background:var(--accent-hi)}
+  button[type=submit] .arrow{transition:translate .35s var(--ease)}
+  button[type=submit]:hover .arrow{translate:.25rem 0}
+  button[type=submit][disabled]{opacity:.6;cursor:progress}
+  .msg{min-height:1.5rem;margin-top:.85rem;font-size:.9375rem;color:var(--error)}
+
+  footer{
+    display:flex;justify-content:space-between;align-items:baseline;gap:1rem;flex-wrap:wrap;
+    padding-top:2rem;border-top:1px solid var(--line);
+    font-size:.9375rem;color:var(--muted);
+    animation:fade 1s .7s var(--ease) both;
+  }
+  footer a{color:var(--ink-mid);text-decoration:none;background:linear-gradient(currentColor,currentColor) 0 100%/0 1px no-repeat;transition:background-size .35s var(--ease),color .25s}
+  footer a:hover{color:var(--ink);background-size:100% 1px}
+
+  @keyframes unveil{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0)}}
+  @keyframes settle{from{scale:1.08}to{scale:1}}
+  @keyframes rise{from{opacity:0;translate:0 .35em}to{opacity:1;translate:0 0}}
+  @keyframes fade{from{opacity:0;translate:0 .6rem}to{opacity:1;translate:0 0}}
+
+  @media (max-width:900px){
+    body{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+    .photo{min-height:0;height:40svh}
+    .photo img{object-position:50% 18%}
+    .photo::after{background:linear-gradient(180deg,transparent 55%,var(--bg))}
+    main{min-height:60svh;padding-top:.5rem}
+    .intro{margin-block:0 3rem}
+    .lede{font-size:1.0625rem}
+  }
+  @media (max-width:480px){
+    .row{flex-direction:column}
+    button[type=submit]{justify-content:center}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+  <div class="photo">
+    <img src="https://images.unsplash.com/photo-1596633609591-e4e1e9e06b7f?auto=format&fit=crop&w=1400&q=80"
+         srcset="https://images.unsplash.com/photo-1596633609591-e4e1e9e06b7f?auto=format&fit=crop&w=800&q=75 800w,
+                 https://images.unsplash.com/photo-1596633609591-e4e1e9e06b7f?auto=format&fit=crop&w=1400&q=80 1400w"
+         sizes="(max-width:900px) 100vw, 45vw"
+         alt="Cuchillo de chef sobre la mesa oscura, entre zanahorias, pimientos, zapallito y cebolla listos para cortar."
+         fetchpriority="high">
+  </div>
+
+  <main>
+    <div class="intro">
+      <h1><span>Mise</span> <span>en</span> <span>Place</span></h1>
+      <p class="lede">Las recetas y fichas técnicas de la cocina, listas antes del servicio.</p>
+
+      <form id="acceso" method="post" action="/api/login" novalidate>
+        <label for="clave">Clave de acceso</label>
+        <div class="row">
+          <div class="field" id="field">
+            <input id="clave" name="clave" type="password" autocomplete="current-password" required autofocus
+                   aria-describedby="msg">
+            <button class="toggle" type="button" id="toggle" aria-controls="clave" aria-pressed="false">Mostrar</button>
+          </div>
+          <button type="submit" id="entrar">Entrar a la cocina <span class="arrow" aria-hidden="true">→</span></button>
+        </div>
+        <p class="msg" id="msg" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+
+    <footer>
+      <a href="mailto:hola@mep.recipes">hola@mep.recipes</a>
+      <span>mep.recipes</span>
+    </footer>
+  </main>
+
+<script>
+  const form = document.getElementById('acceso');
+  const input = document.getElementById('clave');
+  const field = document.getElementById('field');
+  const msg = document.getElementById('msg');
+  const btn = document.getElementById('entrar');
+  const toggle = document.getElementById('toggle');
+  const label = btn.firstChild;
+
+  const fail = text => {
+    msg.textContent = text;
+    field.setAttribute('data-error', '');
+    input.setAttribute('aria-invalid', 'true');
+    input.select();
+  };
+
+  if (new URLSearchParams(location.search).get('clave') === 'mal') {
+    fail('Esa clave no es correcta. Inténtalo otra vez.');
+    history.replaceState(null, '', location.pathname);
+  }
+
+  toggle.addEventListener('click', () => {
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    toggle.textContent = show ? 'Ocultar' : 'Mostrar';
+    toggle.setAttribute('aria-pressed', String(show));
+    input.focus();
+  });
+
+  input.addEventListener('input', () => {
+    if (!field.hasAttribute('data-error')) return;
+    field.removeAttribute('data-error');
+    input.removeAttribute('aria-invalid');
+    msg.textContent = '';
+  });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!input.value) return fail('Escribe la clave para entrar.');
+    btn.disabled = true;
+    label.textContent = 'Abriendo… ';
+    try {
+      const r = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+        body: new URLSearchParams({ clave: input.value }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && data.ok) {
+        location.replace(location.pathname === '/acceso.html' ? '/' : location.href);
+        return;
+      }
+      fail(data.error === 'sin-configurar'
+        ? 'La clave todavía no está configurada en el servidor.'
+        : 'Esa clave no es correcta. Inténtalo otra vez.');
+    } catch {
+      fail('No hay conexión. Revisa tu internet e inténtalo otra vez.');
+    }
+    btn.disabled = false;
+    label.textContent = 'Entrar a la cocina ';
+  });
+</script>
+</body>
+</html>
