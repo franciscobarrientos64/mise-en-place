@@ -780,7 +780,7 @@ const SIDEBAR_W=264;
 const NAV_ITEMS=[["recipes","Recetario","book"],["chef","Chef Privado","chefhat"],["lab","Laboratorio de Sabores","flask"],["organize","Colecciones","star"]];
 const NAV_SHORT={recipes:"Recetario",chef:"Chef Privado",lab:"Laboratorio",organize:"Colecciones"};
 const lbl=(x={})=>({fontFamily:FB,fontSize:11,letterSpacing:1.1,textTransform:"uppercase",fontWeight:500,color:G.textMut,...x});
-function Wordmark({size=26}){return <span style={{fontFamily:FH,fontSize:size,color:G.text,letterSpacing:"-.01em",fontWeight:500,lineHeight:1}}>mep<span style={{color:G.brass}}>.</span>recipes</span>;}
+function Wordmark({size=26}){return <span style={{fontFamily:FH,fontSize:size,color:G.text,letterSpacing:"-.01em",fontWeight:500,lineHeight:1,whiteSpace:"nowrap"}}>Mise en Place</span>;}
 function SyncDot({syncing,synced,onRefresh}){
   const c=syncing?G.brass:synced?G.green:G.textMut;
   return(
@@ -1615,7 +1615,7 @@ function ThermomixTab({recipe,onUpdate}){
 
 /* ══ NUTRICIÓN TAB ══ */
 /* ══ NUTRICIÓN — estimación por ingrediente (valores por 100 g de referencia) en una sola consulta ══ */
-const toGrams=(q,u)=>{q=parseFloat(q)||0;u=String(u||"").toLowerCase();if(u==="kg"||u==="l")return q*1000;if(u==="g"||u==="ml")return q;if(u==="cda")return q*15;if(u==="cdta")return q*5;if(u==="taza")return q*240;if(u==="oz")return q*28.35;if(u==="lb")return q*453.6;if(u==="pizca")return q*0.5;return q*50;};
+const toGrams=(q,u)=>{q=parseFloat(q)||0;u=String(u||"").toLowerCase();if(u==="kg"||u==="l")return q*1000;if(u==="g"||u==="ml")return q;if(u==="cda"||u==="tbsp")return q*15;if(u==="cdta"||u==="tsp")return q*5;if(u==="taza"||u==="cup")return q*240;if(u==="al gusto")return 0;if(u==="oz")return q*28.35;if(u==="lb")return q*453.6;if(u==="pizca")return q*0.5;return q*50;};
 const NUTRI_SCHEMA={type:"object",properties:{items:{type:"array",items:{type:"object",properties:{name:{type:"string"},gramosPorUnidad:{type:"number"},kcal:{type:"number"},protein:{type:"number"},carbs:{type:"number"},fat:{type:"number"},fiber:{type:"number"}},required:["name","gramosPorUnidad","kcal","protein","carbs","fat","fiber"],additionalProperties:false}}},required:["items"],additionalProperties:false};
 function NutricionTab({recipe,onUpdate}){
   const[loading,setLoading]=useState(false);
@@ -1633,7 +1633,7 @@ function NutricionTab({recipe,onUpdate}){
       const bd=ings.map((i,k)=>{
         const d=out.items[k]||out.items.find(x=>normIng(x.name)===normIng(i.name));
         const unit=String(i.unit||"").toLowerCase();
-        const gross=unit==="unidad"||unit==="u"||unit==="pza"?(parseFloat(i.quantity)||0)*((d&&d.gramosPorUnidad)||50):toGrams(i.quantity,i.unit);
+        const gross=unit==="unidad"||unit==="u"||unit==="unid"||unit==="pza"?(parseFloat(i.quantity)||0)*((d&&d.gramosPorUnidad)||50):toGrams(i.quantity,i.unit);
         const grams=gross*((parseFloat(i.yieldPct)||100)/100);
         if(!d)return{name:i.name,grams,kcal:0,protein:0,carbs:0,fat:0,fiber:0};
         const f=grams/100;const row={name:i.name,grams,kcal:+(d.kcal*f).toFixed(1),protein:+(d.protein*f).toFixed(1),carbs:+(d.carbs*f).toFixed(1),fat:+(d.fat*f).toFixed(1),fiber:+(d.fiber*f).toFixed(1)};
@@ -1886,7 +1886,7 @@ function PrintSheet({recipe,pax,factor,cost,co,perPax,pvp,fc,allergens}){
   return(
     <div className="mep-print">
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",borderBottom:"2px solid #000",paddingBottom:6,marginBottom:10}}>
-        <span style={{fontFamily:FH,fontSize:16}}>mep.recipes · Ficha técnica</span>
+        <span style={{fontFamily:FH,fontSize:16}}>Mise en Place · Ficha técnica</span>
         <span style={{fontSize:10}}>{fichaCode(recipe)} · {new Date().toLocaleDateString("es-PE")}</span>
       </div>
       <h1 style={{fontFamily:FH,fontSize:26,fontWeight:500,lineHeight:1.15}}>{recipe.name}</h1>
