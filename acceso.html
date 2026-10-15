@@ -216,7 +216,9 @@
       });
       const data = await r.json().catch(() => ({}));
       if (r.ok && data.ok) {
-        location.replace(location.pathname === '/acceso.html' ? '/' : location.href);
+        // Siempre a la app: la portada también se muestra en rutas que no existen
+        // (p. ej. /acceso), y volver a ellas con la cookie ya puesta daría 404.
+        location.replace('/');
         return;
       }
       fail(data.error === 'sin-configurar'
